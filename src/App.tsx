@@ -2599,7 +2599,7 @@ nad:"45025000390864",motsc:"45025000423632",glutathione:"45025000456400",
 ss31:"45025000489168",selank:"45025000521936",semax:"45025000554704",
 dsip:"45025000587472",mt2:"45025000620240",reconst:"45025000653008",
 };
-function CheckoutLink({cart,total}:{cart:any[],total:number}){
+function CheckoutLink({cart,total}:{cart:{id:string}[],total:number}){
 const items = cart.map(i=>VARIANT_MAP[i.id]?`${VARIANT_MAP[i.id]}:1`:null).filter(Boolean);
 const cartParam = items.join(",");
 const url = items.length>0
