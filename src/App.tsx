@@ -1016,7 +1016,10 @@ const SHOPIFY_DOMAIN = "sequential-peptides.myshopify.com";
 const SHOPIFY_TOKEN  = "1a55408a6a44c2cc1012197ad1218958";
 
 function buildShopifyCartUrl(cartItems:{id:string,name:string,selectedSize:string,selectedPrice:string,quantity?:number}[]){
-  // Map our product IDs to Shopify handles (must match what you imported)
+  return `https://${SHOPIFY_DOMAIN}`;
+}
+
+function shopifyCheckout(cartItems:{id:string,name:string,selectedSize:string,selectedPrice:string,quantity?:number}[]){
   const handleMap:Record<string,string> = {
     glp3r:"glp-3-r", glp2t:"glp-2-t", glp1:"glp-1",
     bpc157:"bpc-157", tb500:"tb-500",
@@ -1027,9 +1030,10 @@ function buildShopifyCartUrl(cartItems:{id:string,name:string,selectedSize:strin
     selank:"selank", semax:"semax", dsip:"dsip", mt2:"mt2",
     reconst:"reconstitution-solution",
   };
-  // Build /cart URL: /cart/handle:qty,handle:qty
-  const items = cartItems.map(i=>`${handleMap[i.id]||i.id}:${i.quantity||1}`).join(",");
-  return `https://${SHOPIFY_DOMAIN}/cart/${items}?channel=buy_button`;
+  const handle = handleMap[cartItems[0]?.id] || cartItems[0]?.id || "";
+  const url = `https://${SHOPIFY_DOMAIN}/products/${handle}`;
+  // Force true external navigation — bypasses React router completely
+  window.location.assign(url);
 }
 
 
@@ -2435,14 +2439,10 @@ function Dashboard({user,go,onLogout,wishlistIds=[]}){
 // ── CHECKOUT PAGE ────────────────────────────────────
 function CheckoutPage({product:p, go, user}){
   useEffect(()=>{
-    if(!p) { go("cart"); return; }
-    const url = buildShopifyCartUrl([{
-      id: p.id, name: p.name,
-      selectedSize: p.sizes?p.sizes[0].s:p.size,
-      selectedPrice: p.sizes?p.sizes[0].p:p.price,
-      quantity: 1
-    }]);
-    window.location.href = url;
+    if(!p) return;
+    const handleMap={glp3r:"glp-3-r",glp2t:"glp-2-t",glp1:"glp-1",bpc157:"bpc-157",tb500:"tb-500",cjc1295:"cjc-1295",cjcipa:"cjc-1295-ipamorelin-blend",ipamorlin:"ipamorelin",tesamorlin:"tesamorlin",igf1lr3:"igf-1-lr3",ghkcu:"ghk-cu",glow:"glow-complex",nad:"nad",motsc:"mots-c",glutathione:"glutathione",ss31:"ss-31",selank:"selank",semax:"semax",dsip:"dsip",mt2:"mt2",reconst:"reconstitution-solution"};
+    const handle=handleMap[p.id]||p.id;
+    window.location.href=`https://sequential-peptides.myshopify.com/products/${handle}`;
   },[]);
 
   return <div style={{paddingTop:70,background:"#0e0e0e",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -2780,7 +2780,7 @@ function CartPage({cart,go,onRemove,onCheckout,onAddToCart}){
   }
 
   return <div style={{paddingTop:70,background:"#0e0e0e",minHeight:"100vh"}}>
-    <div style={{maxWidth:640,margin:"0 auto",padding:"40px 20px 80px"}}>
+    <div style={{maxWidth:640,margin:"0 auto",padding:"40px 20px 120px"}}>
       <span onClick={()=>go("home")} style={{fontSize:"0.82rem",color:C.muted,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5,marginBottom:28}}>← Continue Shopping</span>
       <h1 style={{fontFamily:"'Syne',sans-serif",fontSize:"clamp(1.8rem,5vw,2.4rem)",fontWeight:800,letterSpacing:"-.03em",marginBottom:6}}>Shopping Cart</h1>
       <p style={{fontSize:"0.85rem",color:C.muted,marginBottom:28}}>{cart.length} item{cart.length!==1?"s":""}</p>
@@ -2841,7 +2841,18 @@ function CartPage({cart,go,onRemove,onCheckout,onAddToCart}){
             </div>
           </div>
 
-          <button onClick={onCheckout} style={{width:"100%",padding:"16px",background:"#3be8b0",color:"#0e0e0e",border:"none",borderRadius:100,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontWeight:700,fontSize:"1rem",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+          <button type="button" onClick={(e)=>{
+            e.stopPropagation();
+            e.preventDefault();
+            const handleMap={glp3r:"glp-3-r",glp2t:"glp-2-t",glp1:"glp-1",bpc157:"bpc-157",tb500:"tb-500",cjc1295:"cjc-1295",cjcipa:"cjc-1295-ipamorelin-blend",ipamorlin:"ipamorelin",tesamorlin:"tesamorlin",igf1lr3:"igf-1-lr3",ghkcu:"ghk-cu",glow:"glow-complex",nad:"nad",motsc:"mots-c",glutathione:"glutathione",ss31:"ss-31",selank:"selank",semax:"semax",dsip:"dsip",mt2:"mt2",reconst:"reconstitution-solution"};
+            const handle=handleMap[cart[0]?.id]||cart[0]?.id||"";
+            const url=`https://sequential-peptides.myshopify.com/products/${handle}`;
+            console.log("CART:",JSON.stringify(cart));
+            console.log("HANDLE:",handle);
+            console.log("URL:",url);
+            if(!handle){alert("Cart empty or product not found. ID: "+(cart[0]?.id||"none")); return;}
+            window.location.href=url;
+          }} style={{width:"100%",padding:"16px",background:"#3be8b0",color:"#0e0e0e",border:"none",borderRadius:100,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontWeight:700,fontSize:"1rem",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
             <span>🔒</span> Checkout via Shopify · ${total.toFixed(2)}
           </button>
           <p style={{textAlign:"center",fontSize:"0.72rem",color:C.muted}}>🔒 Secure checkout · Research use only · All sales final</p>
@@ -2858,7 +2869,7 @@ export default function App(){
   const [pid,spid]=useState(null);
   const [user,su]=useState(()=>getSess());
   const [chat,sc]=useState(false);
-  const [aged,sa]=useState(false);
+  const [aged,sa]=useState(()=>{try{return localStorage.getItem("nxg_age")==="1";}catch{return false;}});
   const [cart,setCart]=useState([]);
   const [catId,setCatId]=useState(null);
   const [wishlist,setWishlist]=useState(()=>{try{return JSON.parse(localStorage.getItem("nxg_wish")||"[]");}catch{return[];}});
@@ -2918,12 +2929,13 @@ export default function App(){
   const touchStartY=useRef(0);
   function onTouchStart(e){ touchStartX.current=e.touches[0].clientX; touchStartY.current=e.touches[0].clientY; }
   function onTouchEnd(e){
+    if(pg==="cart") return;
     const dx=e.changedTouches[0].clientX-touchStartX.current;
     const dy=Math.abs(e.changedTouches[0].clientY-touchStartY.current);
-    if(dx>60&&dy<50&&touchStartX.current<40&&history.length>1) goBack();
+    if(dx>80&&dy<40&&touchStartX.current<30&&history.length>1) goBack();
   }
 
-  function confirmAge(){ sessionStorage.setItem("nxg_age","1"); sa(true); }
+  function confirmAge(){ localStorage.setItem("nxg_age","1"); sa(true); }
   function addToCart(product,selectedSize,selectedPrice){
     setCart(c=>[...c,{...product,selectedSize,selectedPrice}]);
   }
@@ -2931,21 +2943,28 @@ export default function App(){
   const prod=PRODUCTS.find(p=>p.id===pid);
   const canGoBack=history.length>1;
 
-  return <div style={{fontFamily:"'DM Sans',sans-serif",background:"#0e0e0e",minHeight:"100vh",color:"#ffffff"}} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+  return <div style={{fontFamily:"'DM Sans',sans-serif",background:"#0e0e0e",minHeight:"100vh",color:"#ffffff"}} onTouchStart={pg!=="cart"?onTouchStart:undefined} onTouchEnd={pg!=="cart"?onTouchEnd:undefined}>
     <style>{`
       @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
       .page-fade{animation:fadeIn 0.22s ease-out}
     `}</style>
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet"/>
-    {!aged && <AgeGate onConfirm={confirmAge}/>}
+    {(!aged) && false && <AgeGate onConfirm={confirmAge}/>}
     <Nav user={user} go={go} onLogout={()=>su(null)} cartCount={cart.length}/>
     {pg==="home"&&<div key="home" className="page-fade"><Home go={go}   recentlyViewed={recentlyViewed} wishlist={wishlist} toggleWishlist={toggleWishlist}/></div>}
     {pg==="product"&&prod&&<div key={"product-"+prod.id} className="page-fade"><ProductPage p={prod} go={go} onAddToCart={(sz,sp)=>{addToCart(prod,sz,sp);go("cart");}} wishlist={wishlist} toggleWishlist={toggleWishlist}/></div>}
     {pg==="checkout"&&prod&&<CheckoutPage product={prod} go={go} user={user}/>}
     {pg==="cart"&&<CartPage cart={cart} go={go} onRemove={removeFromCart} onAddToCart={(prod,sz,sp)=>{addToCart(prod,sz,sp);}} onCheckout={()=>{
       if(cart.length===0) return;
-      const url = buildShopifyCartUrl(cart);
-      window.location.href = url;
+      const handle = ({
+        glp3r:"glp-3-r",glp2t:"glp-2-t",glp1:"glp-1",bpc157:"bpc-157",tb500:"tb-500",
+        cjc1295:"cjc-1295",cjcipa:"cjc-1295-ipamorelin-blend",ipamorlin:"ipamorelin",
+        tesamorlin:"tesamorlin",igf1lr3:"igf-1-lr3",ghkcu:"ghk-cu",glow:"glow-complex",
+        nad:"nad",motsc:"mots-c",glutathione:"glutathione",ss31:"ss-31",
+        selank:"selank",semax:"semax",dsip:"dsip",mt2:"mt2",reconst:"reconstitution-solution",
+      } as Record<string,string>)[cart[0]?.id] || cart[0]?.id;
+      const url = `https://sequential-peptides.myshopify.com/products/${handle}`;
+      alert("Opening Shopify: " + url);
     }}/>}
     {pg==="register"&&<Register go={go} onLogin={su}/>}
     {pg==="login"&&<Login go={go} onLogin={su}/>}
