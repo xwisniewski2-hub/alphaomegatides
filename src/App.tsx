@@ -2960,7 +2960,7 @@ export default function App(){
       .page-fade{animation:fadeIn 0.22s ease-out}
     `}</style>
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet"/>
-    {(!aged) && false && <AgeGate onConfirm={confirmAge}/>}
+    {!aged && <AgeGate onConfirm={confirmAge}/>}
     <Nav user={user} go={go} onLogout={()=>su(null)} cartCount={cart.length}/>
     {pg==="home"&&<div key="home" className="page-fade"><Home go={go}   recentlyViewed={recentlyViewed} wishlist={wishlist} toggleWishlist={toggleWishlist}/></div>}
     {pg==="product"&&prod&&<div key={"product-"+prod.id} className="page-fade"><ProductPage p={prod} go={go} onAddToCart={(sz,sp)=>{addToCart(prod,sz,sp);go("cart");}} wishlist={wishlist} toggleWishlist={toggleWishlist}/></div>}
