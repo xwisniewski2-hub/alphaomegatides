@@ -799,7 +799,7 @@ function ChatBot({onClose}){
       const res=await fetch("https://anthropic-proxy.xwisniewski2.workers.dev",{
         method:"POST",
         headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,
+        body:JSON.stringify({model:"claude-sonnet-4-5-20251001",max_tokens:1000,
           system:`You are the Alphaomegatides AI research assistant — expert in research peptides. You know GLP-1/2/3, BPC-157, TB-500, CJC-1295, Ipamorelin, Tesamorelin, IGF-1 LR3, GHK-Cu, NAD+, MOTS-c, SS-31, Selank, Semax, DSIP, MT2, and all research peptides. Discuss mechanisms, reconstitution, protocols, dosing ranges, cycling, stacking, storage, and peptide science. Keep responses clear and concise. Always note products are for research use only. Never give medical advice. Be conversational and helpful.`,
           messages:apiMsgs.length?apiMsgs:[{role:"user",content:t}]})});
       const data=await res.json();
