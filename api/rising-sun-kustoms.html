@@ -1,0 +1,1714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rising Sun Kustoms</title>
+<meta name="description" content="Motorcycle maintenance & custom fab. Engineer by trade, rider by soul.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Special+Elite&family=Oswald:wght@300;400;500&family=Covered+By+Your+Grace&display=swap" rel="stylesheet">
+
+<style>
+/* ── RESET ── */
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+
+/* ── PALETTE ──
+   Aged paper cream, oil-stained off-white, rust red, motor-oil black,
+   faded yellow, patina green — like a '70s garage bulletin board
+*/
+:root {
+  --paper:    #f0e8d5;
+  --cream:    #e8dfc8;
+  --smudge:   #d4c9ae;
+  --rust:     #b03a1e;
+  --rust-lt:  #cc4422;
+  --oil:      #1a1510;
+  --oil-mid:  #2a2118;
+  --oil-soft: #3a3028;
+  --soot:     #111008;
+  --yellow:   #d4a017;
+  --yell-lt:  #e8b820;
+  --green:    #4a6741;
+  --chrome:   #9a9080;
+  --marker:   'Permanent Marker', cursive;
+  --typewriter: 'Special Elite', cursive;
+  --stencil:  'Oswald', sans-serif;
+  --scrawl:   'Covered By Your Grace', cursive;
+}
+
+body {
+  background: var(--oil);
+  color: var(--paper);
+  font-family: var(--typewriter);
+  overflow-x: hidden;
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='4' fill='%23b03a1e' opacity='0.8'/%3E%3C/svg%3E") 10 10, auto;
+}
+
+/* Noise / grain over everything */
+body::after {
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  opacity:0.07;
+  pointer-events:none;
+  z-index:9000;
+}
+
+::-webkit-scrollbar { width:5px; }
+::-webkit-scrollbar-track { background:var(--oil); }
+::-webkit-scrollbar-thumb { background:var(--rust); }
+
+/* ══════════════════════════════
+   NAV — pinned receipt tape style
+══════════════════════════════ */
+nav {
+  position:fixed;
+  top:0; width:100%;
+  z-index:500;
+  background:var(--soot);
+  border-bottom:3px solid var(--rust);
+  padding:0 28px;
+  height:58px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+/* worn edge under nav */
+nav::after {
+  content:'';
+  position:absolute;
+  bottom:-8px; left:0; right:0;
+  height:8px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--soot) 0px, var(--soot) 12px,
+    transparent 12px, transparent 18px
+  );
+  opacity:.5;
+}
+
+.nav-logo {
+  font-family: var(--marker);
+  font-size: 22px;
+  color: var(--rust-lt);
+  text-decoration: none;
+  letter-spacing: 1px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.nav-logo-sun {
+  width:32px;
+  height:32px;
+  flex-shrink:0;
+}
+.nav-links {
+  display:flex;
+  list-style:none;
+  gap:28px;
+  align-items:center;
+}
+.nav-links a {
+  font-family: var(--stencil);
+  font-weight:400;
+  font-size:12px;
+  letter-spacing:3px;
+  text-transform:uppercase;
+  color: var(--smudge);
+  text-decoration:none;
+  transition: color .2s;
+  position:relative;
+}
+.nav-links a:hover { color: var(--paper); }
+.nav-cta-link {
+  background: var(--rust) !important;
+  color: var(--paper) !important;
+  padding: 7px 18px !important;
+  font-size:11px !important;
+}
+.nav-cta-link:hover { background: var(--rust-lt) !important; color: white !important; }
+
+.hamburger {
+  display:none;
+  flex-direction:column;
+  gap:5px;
+  cursor:pointer;
+}
+.hamburger span {
+  display:block;
+  width:22px;
+  height:2px;
+  background: var(--smudge);
+}
+.mob-menu {
+  display:none;
+  position:fixed;
+  top:58px;
+  left:0;right:0;
+  background:var(--soot);
+  border-bottom:2px solid var(--rust);
+  padding:20px 28px;
+  flex-direction:column;
+  gap:16px;
+  z-index:499;
+}
+.mob-menu.open { display:flex; }
+.mob-menu a {
+  font-family:var(--stencil);
+  font-size:18px;
+  letter-spacing:3px;
+  text-transform:uppercase;
+  color:var(--smudge);
+  text-decoration:none;
+  border-bottom:1px solid rgba(255,255,255,.05);
+  padding-bottom:12px;
+}
+
+/* ══════════════════════════════
+   HERO — worn bulletin board look
+══════════════════════════════ */
+#hero {
+  position:relative;
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  padding-top:58px;
+  overflow:hidden;
+  background: var(--oil);
+}
+
+/* Road / horizon bg */
+.hero-road {
+  position:absolute;
+  inset:0;
+  background:
+    /* sky gradient */
+    linear-gradient(to bottom,
+      #0d0c08 0%,
+      #1a1208 35%,
+      #2a1a05 55%,
+      #1a1208 70%,
+      #0d0c08 100%
+    );
+}
+
+/* Sun on the horizon */
+.hero-sun-wrap {
+  position:absolute;
+  bottom: 38%;
+  left:50%;
+  transform:translateX(-50%);
+  width:min(70vw, 700px);
+  aspect-ratio:1;
+  animation:sunRise 1.6s cubic-bezier(.2,0,.4,1) both;
+}
+@keyframes sunRise {
+  from { opacity:0; transform:translateX(-50%) translateY(80px) scale(.85); }
+  to   { opacity:1; transform:translateX(-50%) translateY(0) scale(1); }
+}
+.hero-sun-svg { width:100%; height:100%; }
+
+/* Road lane */
+.hero-asphalt {
+  position:absolute;
+  bottom:0; left:0; right:0;
+  height:42%;
+  background: linear-gradient(to bottom, #0a0a08 0%, #141210 100%);
+  clip-path: polygon(30% 0%, 70% 0%, 100% 100%, 0% 100%);
+}
+.hero-asphalt::after {
+  content:'';
+  position:absolute;
+  bottom:0; left:50%;
+  transform:translateX(-50%);
+  width:4px;
+  height:100%;
+  background: repeating-linear-gradient(
+    to top,
+    var(--yellow) 0px, var(--yellow) 24px,
+    transparent 24px, transparent 48px
+  );
+  opacity:.5;
+}
+/* road sides */
+.road-line-l, .road-line-r {
+  position:absolute;
+  bottom:0;
+  width:3px;
+  height:100%;
+  background: linear-gradient(to top, rgba(200,180,100,.3), transparent);
+}
+.road-line-l { left:0; }
+.road-line-r { right:0; }
+
+/* Hero content — like a hand-lettered sign */
+.hero-content {
+  position:relative;
+  z-index:10;
+  width:100%;
+  padding:0 5vw;
+  padding-bottom:38vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  text-align:center;
+}
+
+.hero-eyebrow {
+  font-family: var(--scrawl);
+  font-size: clamp(16px,2.5vw,22px);
+  color: var(--yellow);
+  letter-spacing:2px;
+  margin-bottom:12px;
+  opacity:0;
+  animation: fadeSlide .7s ease .4s forwards;
+  transform:rotate(-1deg);
+  display:inline-block;
+}
+
+.hero-h1 {
+  font-family: var(--marker);
+  font-size: clamp(52px, 10vw, 130px);
+  line-height: .92;
+  letter-spacing:-1px;
+  opacity:0;
+  animation: fadeSlide .8s ease .6s forwards;
+}
+.hero-h1 .r1 { color: var(--rust-lt); display:block; transform:rotate(-1.5deg); }
+.hero-h1 .r2 { color: var(--paper); display:block; transform:rotate(.5deg); }
+.hero-h1 .r3 {
+  color: transparent;
+  -webkit-text-stroke: 2px rgba(176,58,30,.5);
+  display:block;
+  transform:rotate(-0.8deg);
+  font-size:.65em;
+}
+
+.hero-sub {
+  font-family: var(--typewriter);
+  font-size: clamp(13px,1.6vw,17px);
+  color: var(--smudge);
+  margin-top:24px;
+  max-width:420px;
+  line-height:1.7;
+  opacity:0;
+  animation: fadeSlide .7s ease 1s forwards;
+}
+
+.hero-btns {
+  display:flex;
+  gap:16px;
+  margin-top:36px;
+  flex-wrap:wrap;
+  justify-content:center;
+  opacity:0;
+  animation: fadeSlide .7s ease 1.2s forwards;
+}
+
+/* Tape strip button */
+.btn-tape {
+  display:inline-block;
+  background: var(--yellow);
+  color: var(--oil);
+  font-family: var(--stencil);
+  font-weight:500;
+  font-size:13px;
+  letter-spacing:3px;
+  text-transform:uppercase;
+  text-decoration:none;
+  padding:13px 32px;
+  position:relative;
+  transition: transform .2s, filter .2s;
+  box-shadow: 3px 3px 0 rgba(0,0,0,.6), -1px -1px 0 rgba(0,0,0,.3);
+}
+.btn-tape::before, .btn-tape::after {
+  content:'';
+  position:absolute;
+  top:50%;
+  transform:translateY(-50%);
+  width:22px;
+  height:36px;
+  background:rgba(212,160,23,.35);
+  backdrop-filter:blur(1px);
+}
+.btn-tape::before { left:-22px; }
+.btn-tape::after  { right:-22px; }
+.btn-tape:hover { transform:translateY(-3px) rotate(-.5deg); filter:brightness(1.15); }
+
+.btn-ghost {
+  display:inline-block;
+  background: transparent;
+  color: var(--smudge);
+  font-family: var(--typewriter);
+  font-size:14px;
+  text-decoration:none;
+  padding:12px 28px;
+  border:1px dashed rgba(154,144,128,.4);
+  letter-spacing:1px;
+  transition: color .2s, border-color .2s;
+}
+.btn-ghost:hover { color:var(--paper); border-color:var(--paper); }
+
+@keyframes fadeSlide {
+  from { opacity:0; transform:translateY(20px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+/* scroll nudge */
+.scroll-nudge {
+  position:absolute;
+  bottom:24px;
+  left:50%;
+  transform:translateX(-50%);
+  font-family:var(--scrawl);
+  font-size:14px;
+  color:rgba(212,160,23,.6);
+  animation:nudge 2s ease-in-out infinite;
+  white-space:nowrap;
+  z-index:10;
+}
+@keyframes nudge {
+  0%,100%{transform:translateX(-50%) translateY(0);}
+  50%{transform:translateX(-50%) translateY(8px);}
+}
+
+/* ══════════════════════════════
+   RIPPED PAPER DIVIDER
+══════════════════════════════ */
+.rip {
+  width:100%;
+  height:60px;
+  position:relative;
+  overflow:hidden;
+}
+.rip svg { width:100%; height:100%; display:block; }
+
+/* ══════════════════════════════
+   ABOUT — garage bulletin board
+══════════════════════════════ */
+#about {
+  background: #1c1510;
+  position:relative;
+  padding:80px 0 60px;
+}
+/* cinder block texture */
+#about::before {
+  content:'';
+  position:absolute;
+  inset:0;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.012) 0px, rgba(255,255,255,.012) 1px, transparent 1px, transparent 32px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.012) 0px, rgba(255,255,255,.012) 1px, transparent 1px, transparent 48px);
+  pointer-events:none;
+}
+
+.about-wrap {
+  max-width:1100px;
+  margin:0 auto;
+  padding:0 32px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:64px;
+  align-items:start;
+}
+
+/* Sticky note style card */
+.sticky {
+  background: #e8d87a;
+  color: var(--oil);
+  padding:32px 28px 36px;
+  position:relative;
+  box-shadow: 4px 6px 20px rgba(0,0,0,.6), inset 0 -4px 0 rgba(0,0,0,.12);
+  transform:rotate(-1.2deg);
+  transition: transform .3s;
+}
+.sticky:hover { transform:rotate(-.3deg) translateY(-4px); }
+.sticky::before {
+  content:'';
+  position:absolute;
+  top:-14px;
+  left:50%;
+  transform:translateX(-50%);
+  width:48px;
+  height:28px;
+  background:rgba(240,220,180,.7);
+  box-shadow:0 2px 6px rgba(0,0,0,.3);
+  clip-path:polygon(0 0,100% 0,100% 100%,0 100%);
+}
+.sticky h2 {
+  font-family: var(--marker);
+  font-size:32px;
+  line-height:1.1;
+  margin-bottom:16px;
+  color: var(--oil);
+}
+.sticky p {
+  font-family: var(--typewriter);
+  font-size:14px;
+  line-height:1.85;
+  color:#3a3020;
+}
+.sticky p + p { margin-top:12px; }
+.sticky .underline { text-decoration:underline; text-decoration-color:var(--rust); text-decoration-thickness:2px; }
+
+/* handwritten list */
+.hw-list {
+  list-style:none;
+  margin-top:20px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.hw-list li {
+  font-family: var(--scrawl);
+  font-size:18px;
+  color:#2a2015;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.hw-list li::before {
+  content:'✓';
+  color: var(--rust);
+  font-size:20px;
+  font-family:var(--marker);
+}
+
+/* right side — stacked "photos" */
+.about-photos {
+  display:flex;
+  flex-direction:column;
+  gap:24px;
+  padding-top:20px;
+}
+.photo-card {
+  background: var(--oil-mid);
+  padding:16px;
+  box-shadow: 5px 7px 24px rgba(0,0,0,.7);
+  position:relative;
+  transition: transform .3s;
+}
+.photo-card:nth-child(1) { transform:rotate(1.8deg); }
+.photo-card:nth-child(2) { transform:rotate(-2.2deg); margin-left:24px; }
+.photo-card:nth-child(3) { transform:rotate(1deg); margin-left:-12px; }
+.photo-card:hover { transform:rotate(0deg) scale(1.04) !important; z-index:10; }
+
+.photo-inner {
+  aspect-ratio:16/9;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:72px;
+  position:relative;
+  overflow:hidden;
+}
+.photo-card:nth-child(1) .photo-inner { background: radial-gradient(ellipse at 40% 60%, #2a1505, #0a0805); }
+.photo-card:nth-child(2) .photo-inner { background: radial-gradient(ellipse at 60% 40%, #1a1005, #080806); }
+.photo-card:nth-child(3) .photo-inner { background: radial-gradient(ellipse at 50% 70%, #1a1a0a, #080808); }
+
+.photo-caption {
+  font-family: var(--scrawl);
+  font-size:15px;
+  color:var(--smudge);
+  text-align:center;
+  padding-top:10px;
+}
+
+/* pin dot */
+.pin {
+  position:absolute;
+  top:-10px;
+  left:50%;
+  transform:translateX(-50%);
+  width:18px;
+  height:18px;
+  background: var(--rust);
+  border-radius:50%;
+  box-shadow:0 2px 8px rgba(0,0,0,.6);
+  z-index:2;
+}
+.pin::after {
+  content:'';
+  position:absolute;
+  bottom:-4px;
+  left:50%;
+  transform:translateX(-50%);
+  width:2px;
+  height:6px;
+  background: rgba(176,58,30,.5);
+}
+
+/* ══════════════════════════════
+   SERVICES — like a grease-stained menu on the wall
+══════════════════════════════ */
+#services {
+  background: var(--oil);
+  padding:80px 0 60px;
+  position:relative;
+}
+
+.section-tag {
+  font-family: var(--scrawl);
+  font-size:20px;
+  color: var(--yellow);
+  letter-spacing:1px;
+  margin-bottom:4px;
+  display:block;
+}
+.section-h {
+  font-family: var(--marker);
+  font-size: clamp(38px,6vw,72px);
+  line-height:.95;
+  margin-bottom:0;
+}
+
+.services-wrap {
+  max-width:1100px;
+  margin:0 auto;
+  padding:0 32px;
+}
+.services-top {
+  margin-bottom:52px;
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap:32px;
+}
+.services-note {
+  font-family:var(--typewriter);
+  font-size:13px;
+  color:var(--chrome);
+  max-width:320px;
+  line-height:1.7;
+  text-align:right;
+  border-right:2px solid rgba(176,58,30,.4);
+  padding-right:16px;
+}
+
+/* Service items as chalk board lines */
+.svc-list {
+  display:flex;
+  flex-direction:column;
+  gap:0;
+}
+.svc-item {
+  display:grid;
+  grid-template-columns:52px 1fr auto;
+  align-items:start;
+  padding:24px 0;
+  border-bottom:1px solid rgba(255,255,255,.06);
+  gap:20px;
+  position:relative;
+  transition: background .25s;
+  cursor:default;
+}
+.svc-item::before {
+  content:'';
+  position:absolute;
+  left:-32px;
+  top:0;
+  bottom:0;
+  width:3px;
+  background: var(--rust);
+  transform:scaleY(0);
+  transition:transform .3s ease;
+  transform-origin:bottom;
+}
+.svc-item:hover::before { transform:scaleY(1); }
+.svc-item:hover { background:rgba(255,255,255,.025); margin:0 -20px; padding:24px 20px; }
+
+.svc-num {
+  font-family:var(--marker);
+  font-size:38px;
+  color:rgba(176,58,30,.3);
+  line-height:1;
+  user-select:none;
+}
+.svc-body {}
+.svc-title {
+  font-family:var(--stencil);
+  font-weight:500;
+  font-size:22px;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  color:var(--paper);
+  margin-bottom:6px;
+}
+.svc-desc {
+  font-family:var(--typewriter);
+  font-size:13px;
+  color:var(--chrome);
+  line-height:1.7;
+  max-width:520px;
+}
+.svc-tags {
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-top:10px;
+}
+.svc-tag {
+  font-family:var(--stencil);
+  font-size:10px;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  color:var(--yellow);
+  border:1px solid rgba(212,160,23,.3);
+  padding:3px 10px;
+}
+.svc-price {
+  font-family:var(--marker);
+  font-size:18px;
+  color:var(--rust-lt);
+  text-align:right;
+  white-space:nowrap;
+  padding-top:4px;
+}
+.svc-highlight {
+  background: rgba(176,58,30,.08);
+  border-bottom:1px solid rgba(176,58,30,.2);
+}
+
+/* Welding section — big feature */
+.weld-feature {
+  margin-top:48px;
+  background: var(--oil-mid);
+  padding:40px 36px;
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:40px;
+  align-items:center;
+  border-left:4px solid var(--rust);
+  position:relative;
+  overflow:hidden;
+}
+.weld-feature::before {
+  content:'WELD';
+  position:absolute;
+  right:-20px;
+  top:50%;
+  transform:translateY(-50%) rotate(90deg);
+  font-family:var(--marker);
+  font-size:96px;
+  color:rgba(176,58,30,.07);
+  pointer-events:none;
+  white-space:nowrap;
+}
+.weld-title {
+  font-family:var(--marker);
+  font-size:clamp(28px,4vw,48px);
+  color:var(--rust-lt);
+  margin-bottom:12px;
+  line-height:1;
+}
+.weld-desc {
+  font-family:var(--typewriter);
+  font-size:14px;
+  color:var(--smudge);
+  line-height:1.8;
+  max-width:520px;
+}
+.weld-sparks {
+  font-size:64px;
+  line-height:1;
+  filter:drop-shadow(0 0 20px rgba(212,160,23,.6));
+  animation:flicker 2.5s ease-in-out infinite;
+}
+@keyframes flicker {
+  0%,100%{opacity:1;transform:scale(1) rotate(-3deg);}
+  30%{opacity:.85;transform:scale(1.05) rotate(2deg);}
+  60%{opacity:.95;transform:scale(.97) rotate(-1deg);}
+}
+
+/* ══════════════════════════════
+   OPEN ROAD SECTION
+══════════════════════════════ */
+#road {
+  position:relative;
+  min-height:420px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  background: var(--oil);
+}
+.road-bg {
+  position:absolute;
+  inset:0;
+  background:
+    linear-gradient(to bottom,
+      #0d0c08 0%,
+      #151008 25%,
+      #1a1208 50%,
+      #0d0c08 100%
+    );
+}
+/* vanishing point road */
+.road-asphalt {
+  position:absolute;
+  bottom:0;
+  left:50%;
+  transform:translateX(-50%);
+  width:0;
+  border-left:52vw solid transparent;
+  border-right:52vw solid transparent;
+  border-bottom:240px solid #111008;
+}
+.road-stripe {
+  position:absolute;
+  bottom:0;
+  left:50%;
+  transform:translateX(-50%);
+  width:8px;
+  height:200px;
+  background:repeating-linear-gradient(
+    to bottom,
+    transparent 0,transparent 20px,
+    rgba(212,160,23,.45) 20px,rgba(212,160,23,.45) 44px
+  );
+}
+.road-sun-glow {
+  position:absolute;
+  bottom:35%;
+  left:50%;
+  transform:translateX(-50%);
+  width:300px;
+  height:180px;
+  border-radius:50%;
+  background:radial-gradient(ellipse, rgba(212,100,20,.28) 0%, transparent 70%);
+  filter:blur(24px);
+}
+.road-quote {
+  position:relative;
+  z-index:5;
+  text-align:center;
+  padding:0 24px;
+}
+.road-quote blockquote {
+  font-family: var(--marker);
+  font-size: clamp(28px,5vw,62px);
+  line-height:1.1;
+  color:var(--paper);
+  max-width:800px;
+}
+.road-quote blockquote span { color:var(--rust-lt); }
+.road-quote cite {
+  display:block;
+  margin-top:20px;
+  font-family:var(--scrawl);
+  font-size:20px;
+  color:var(--yellow);
+  font-style:normal;
+}
+
+/* ══════════════════════════════
+   REVIEWS — torn paper cards
+══════════════════════════════ */
+#reviews {
+  background:#1c1510;
+  padding:80px 0;
+  position:relative;
+}
+#reviews::before {
+  content:'';
+  position:absolute;
+  inset:0;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.012) 0, rgba(255,255,255,.012) 1px, transparent 1px, transparent 32px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.012) 0, rgba(255,255,255,.012) 1px, transparent 1px, transparent 48px);
+  pointer-events:none;
+}
+.reviews-wrap {
+  max-width:1100px;
+  margin:0 auto;
+  padding:0 32px;
+}
+.reviews-header { margin-bottom:48px; }
+.reviews-grid {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:28px;
+}
+.review-card {
+  background:var(--paper);
+  color:var(--oil);
+  padding:28px 24px 24px;
+  position:relative;
+  box-shadow:4px 6px 18px rgba(0,0,0,.6);
+  transition:transform .3s;
+}
+.review-card:nth-child(1){transform:rotate(-.8deg);}
+.review-card:nth-child(2){transform:rotate(.5deg);}
+.review-card:nth-child(3){transform:rotate(-1.2deg);}
+.review-card:hover{transform:rotate(0) translateY(-6px) scale(1.02)!important;}
+
+/* torn top edge */
+.review-card::before {
+  content:'';
+  position:absolute;
+  top:-10px;
+  left:0;right:0;
+  height:14px;
+  background: inherit;
+  clip-path:polygon(
+    0% 100%,2% 0%,5% 80%,8% 10%,11% 90%,14% 5%,17% 85%,20% 15%,
+    23% 95%,26% 5%,29% 80%,32% 20%,35% 90%,38% 5%,41% 85%,44% 10%,
+    47% 95%,50% 0%,53% 85%,56% 15%,59% 90%,62% 5%,65% 80%,68% 20%,
+    71% 95%,74% 0%,77% 80%,80% 15%,83% 90%,86% 10%,89% 85%,92% 5%,
+    95% 80%,98% 15%,100% 100%
+  );
+}
+.review-stars {color:var(--yellow);font-size:14px;margin-bottom:10px;}
+.review-text {
+  font-family:var(--typewriter);
+  font-size:13px;
+  line-height:1.8;
+  color:#2a2015;
+  margin-bottom:18px;
+}
+.review-author {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  border-top:1px dashed rgba(42,32,21,.25);
+  padding-top:14px;
+}
+.review-av {
+  width:36px;height:36px;
+  border-radius:50%;
+  background:var(--rust);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--marker);
+  font-size:16px;
+  color:white;
+  flex-shrink:0;
+}
+.review-name {
+  font-family:var(--scrawl);
+  font-size:18px;
+  color:var(--oil);
+  line-height:1;
+}
+.review-bike {
+  font-family:var(--typewriter);
+  font-size:11px;
+  color:var(--rust);
+}
+
+/* ══════════════════════════════
+   BOOKING — garage counter style
+══════════════════════════════ */
+#booking {
+  background:var(--oil);
+  padding:80px 0;
+  position:relative;
+}
+.booking-wrap {
+  max-width:1100px;
+  margin:0 auto;
+  padding:0 32px;
+  display:grid;
+  grid-template-columns:1fr 1.1fr;
+  gap:72px;
+  align-items:start;
+}
+
+.booking-left .section-h { margin-bottom:20px; }
+.booking-left p {
+  font-family:var(--typewriter);
+  font-size:14px;
+  color:var(--chrome);
+  line-height:1.8;
+  margin-bottom:32px;
+}
+
+/* Contact scraps — like sticky notes on the counter */
+.contact-scraps {
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+.scrap {
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:14px 18px;
+  background:var(--oil-soft);
+  border-left:3px solid var(--rust);
+  font-family:var(--typewriter);
+  font-size:14px;
+  color:var(--smudge);
+  position:relative;
+}
+.scrap-icon { font-size:20px; flex-shrink:0; }
+.scrap strong { color:var(--paper); }
+
+/* Form — looks like a carbon copy work order */
+.work-order {
+  background:var(--cream);
+  color:var(--oil);
+  padding:36px 32px;
+  position:relative;
+  box-shadow:5px 8px 28px rgba(0,0,0,.7);
+}
+.work-order::before {
+  content:'WORK ORDER #RSK-____';
+  display:block;
+  font-family:var(--typewriter);
+  font-size:11px;
+  color:rgba(42,32,21,.4);
+  letter-spacing:2px;
+  margin-bottom:20px;
+  border-bottom:1px solid rgba(42,32,21,.15);
+  padding-bottom:12px;
+}
+.work-order::after {
+  content:'RISING SUN KUSTOMS';
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%) rotate(-30deg);
+  font-family:var(--marker);
+  font-size:52px;
+  color:rgba(176,58,30,.06);
+  pointer-events:none;
+  white-space:nowrap;
+  z-index:0;
+}
+
+.wo-row {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px;
+  margin-bottom:16px;
+}
+.wo-field {
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  position:relative;
+  z-index:1;
+}
+.wo-field.full { grid-column:1/-1; }
+.wo-label {
+  font-family:var(--typewriter);
+  font-size:10px;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  color:rgba(42,32,21,.55);
+}
+.wo-input, .wo-select, .wo-textarea {
+  background:transparent;
+  border:none;
+  border-bottom:1.5px solid rgba(42,32,21,.3);
+  font-family:var(--typewriter);
+  font-size:14px;
+  color:var(--oil);
+  padding:7px 0;
+  outline:none;
+  width:100%;
+  transition:border-color .2s;
+  appearance:none;
+}
+.wo-input:focus,
+.wo-select:focus,
+.wo-textarea:focus { border-bottom-color:var(--rust); }
+.wo-input::placeholder,
+.wo-textarea::placeholder { color:rgba(42,32,21,.3); }
+.wo-textarea { resize:none; height:80px; }
+.wo-select {
+  cursor:pointer;
+  color:var(--oil);
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath fill='%23b03a1e' d='M5 6 0 0h10z'/%3E%3C/svg%3E") right 4px center no-repeat;
+}
+.wo-select option { background:var(--cream); }
+
+.wo-submit {
+  width:100%;
+  margin-top:20px;
+  background:var(--rust);
+  color:var(--paper);
+  border:none;
+  font-family:var(--marker);
+  font-size:22px;
+  letter-spacing:2px;
+  padding:16px;
+  cursor:pointer;
+  transition:background .2s, transform .15s;
+  position:relative;
+  z-index:1;
+  box-shadow: 3px 3px 0 var(--oil);
+}
+.wo-submit:hover {
+  background:var(--rust-lt);
+  transform:translateY(-2px);
+  box-shadow:3px 5px 0 var(--oil);
+}
+.wo-submit:active {
+  transform:translateY(0);
+  box-shadow:1px 1px 0 var(--oil);
+}
+
+/* ══════════════════════════════
+   FOOTER
+══════════════════════════════ */
+footer {
+  background:var(--soot);
+  border-top:3px solid var(--rust);
+  padding:48px 32px 28px;
+}
+.footer-inner {
+  max-width:1100px;
+  margin:0 auto;
+  display:grid;
+  grid-template-columns:1.4fr 1fr 1fr;
+  gap:48px;
+  margin-bottom:40px;
+}
+.footer-brand {
+  font-family:var(--marker);
+  font-size:28px;
+  color:var(--rust-lt);
+  display:block;
+  margin-bottom:6px;
+}
+.footer-tagline {
+  font-family:var(--scrawl);
+  font-size:17px;
+  color:var(--chrome);
+  line-height:1.6;
+  max-width:260px;
+  margin-bottom:20px;
+}
+.footer-socials {
+  display:flex;
+  gap:12px;
+}
+.soc-btn {
+  width:36px;height:36px;
+  background:rgba(255,255,255,.06);
+  border:1px dashed rgba(255,255,255,.12);
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;
+  text-decoration:none;
+  transition:background .2s, border-color .2s;
+  color:var(--smudge);
+}
+.soc-btn:hover { background:var(--rust); border-color:var(--rust); }
+
+.footer-col h4 {
+  font-family:var(--stencil);
+  font-size:11px;
+  font-weight:500;
+  letter-spacing:4px;
+  text-transform:uppercase;
+  color:var(--rust-lt);
+  margin-bottom:18px;
+  border-bottom:1px dashed rgba(176,58,30,.3);
+  padding-bottom:10px;
+}
+.footer-col ul { list-style:none; display:flex; flex-direction:column; gap:10px; }
+.footer-col a {
+  font-family:var(--typewriter);
+  font-size:13px;
+  color:rgba(240,232,213,.5);
+  text-decoration:none;
+  transition:color .2s;
+}
+.footer-col a:hover { color:var(--paper); }
+
+.footer-bottom {
+  border-top:1px solid rgba(255,255,255,.06);
+  padding-top:20px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  max-width:1100px;
+  margin:0 auto;
+}
+.footer-copy {
+  font-family:var(--typewriter);
+  font-size:11px;
+  color:rgba(240,232,213,.3);
+}
+/* American flag stripe — subtle */
+.footer-flag {
+  display:flex;
+  gap:3px;
+}
+.flag-r,.flag-w,.flag-b {
+  width:28px;height:10px;
+  border-radius:1px;
+}
+.flag-r{background:var(--rust);}
+.flag-w{background:var(--paper);opacity:.7;}
+.flag-b{background:#1b3a6b;}
+
+/* ══════════════════════════════
+   SCROLL REVEAL
+══════════════════════════════ */
+.sr {
+  opacity:0;
+  transform:translateY(32px);
+  transition:opacity .7s ease, transform .7s ease;
+}
+.sr.in {
+  opacity:1;
+  transform:translateY(0);
+}
+.sr-d1{transition-delay:.1s;}
+.sr-d2{transition-delay:.2s;}
+.sr-d3{transition-delay:.3s;}
+.sr-d4{transition-delay:.4s;}
+
+/* ══════════════════════════════
+   RESPONSIVE
+══════════════════════════════ */
+@media(max-width:900px){
+  .about-wrap,.booking-wrap{ grid-template-columns:1fr; gap:40px; }
+  .reviews-grid{ grid-template-columns:1fr; max-width:420px; margin:0 auto; }
+  .footer-inner{ grid-template-columns:1fr; gap:32px; }
+  .services-top{ flex-direction:column; align-items:flex-start; }
+  .services-note{ text-align:left; border-right:none; border-left:2px solid rgba(176,58,30,.4); padding-right:0; padding-left:16px; }
+  .weld-feature{ grid-template-columns:1fr; }
+  .weld-sparks{ text-align:center; }
+}
+@media(max-width:600px){
+  .nav-links{ display:none; }
+  .hamburger{ display:flex; }
+  .svc-item{ grid-template-columns:40px 1fr; }
+  .svc-price{ display:none; }
+  .wo-row{ grid-template-columns:1fr; }
+  .footer-bottom{ flex-direction:column; gap:14px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══ NAV ══ -->
+<nav id="nav">
+  <a href="#hero" class="nav-logo">
+    <!-- Inline mini sun SVG -->
+    <svg class="nav-logo-sun" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+      <rect width="48" height="48" fill="#1a1510"/>
+      <!-- rays from bottom center -->
+      <g fill="none" stroke="#f0e8d5" stroke-width="1.4" opacity=".7">
+        <line x1="24" y1="38" x2="24" y2="4"/>
+        <line x1="24" y1="38" x2="8"  y2="8"/>
+        <line x1="24" y1="38" x2="2"  y2="18"/>
+        <line x1="24" y1="38" x2="2"  y2="32"/>
+        <line x1="24" y1="38" x2="40" y2="8"/>
+        <line x1="24" y1="38" x2="46" y2="18"/>
+        <line x1="24" y1="38" x2="46" y2="32"/>
+        <line x1="24" y1="38" x2="14" y2="4"/>
+        <line x1="24" y1="38" x2="34" y2="4"/>
+      </g>
+      <circle cx="24" cy="36" r="5" fill="#b03a1e"/>
+      <text x="3" y="46" font-family="serif" font-size="5" fill="#f0e8d5" opacity=".6">RSK</text>
+    </svg>
+    Rising Sun Kustoms
+  </a>
+
+  <ul class="nav-links">
+    <li><a href="#about">About</a></li>
+    <li><a href="#services">Services</a></li>
+    <li><a href="#road">Vibes</a></li>
+    <li><a href="#reviews">Reviews</a></li>
+    <li><a href="#booking" class="nav-cta-link">Hit Me Up</a></li>
+  </ul>
+
+  <div class="hamburger" id="hbg" onclick="toggleNav()">
+    <span></span><span></span><span></span>
+  </div>
+</nav>
+
+<div class="mob-menu" id="mob">
+  <a href="#about"    onclick="toggleNav()">About</a>
+  <a href="#services" onclick="toggleNav()">Services</a>
+  <a href="#road"     onclick="toggleNav()">Vibes</a>
+  <a href="#reviews"  onclick="toggleNav()">Reviews</a>
+  <a href="#booking"  onclick="toggleNav()">Hit Me Up</a>
+</div>
+
+
+<!-- ══ HERO ══ -->
+<section id="hero">
+  <div class="hero-road"></div>
+
+  <!-- Big rising sun SVG on the horizon -->
+  <div class="hero-sun-wrap">
+    <svg class="hero-sun-svg" viewBox="0 0 600 600" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <radialGradient id="sunGlow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%"   stop-color="#cc4422" stop-opacity="0.95"/>
+          <stop offset="55%"  stop-color="#882200" stop-opacity="0.55"/>
+          <stop offset="100%" stop-color="#1a0800" stop-opacity="0"/>
+        </radialGradient>
+        <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%"  stop-color="#ff6633" stop-opacity="1"/>
+          <stop offset="100%" stop-color="#aa2200" stop-opacity="1"/>
+        </radialGradient>
+      </defs>
+
+      <!-- outer glow halo -->
+      <circle cx="300" cy="300" r="290" fill="url(#sunGlow)"/>
+
+      <!-- rays — alternating red and cream, from center -->
+      <g opacity="0.9">
+        <!-- 16 rays -->
+        <polygon points="300,300 276,20 324,20"  fill="#b03a1e" opacity=".85"/>
+        <polygon points="300,300 206,40 254,10"  fill="#e8dfc8" opacity=".35"/>
+        <polygon points="300,300 140,100 110,155" fill="#b03a1e" opacity=".85"/>
+        <polygon points="300,300 70,185 50,240"  fill="#e8dfc8" opacity=".35"/>
+        <polygon points="300,300 20,276 20,324"  fill="#b03a1e" opacity=".85"/>
+        <polygon points="300,300 40,394 10,346"  fill="#e8dfc8" opacity=".35"/>
+        <polygon points="300,300 100,460 155,490" fill="#b03a1e" opacity=".85"/>
+        <polygon points="300,300 185,530 240,550" fill="#e8dfc8" opacity=".35"/>
+        <polygon points="300,300 276,580 324,580" fill="#b03a1e" opacity=".85"/>
+        <polygon points="300,300 394,560 346,590" fill="#e8dfc8" opacity=".35"/>
+        <polygon points="300,300 460,500 490,445" fill="#b03a1e" opacity=".85"/>
+        <polygon points="300,300 530,415 550,360" fill="#e8dfc8" opacity=".35"/>
+        <polygon points="300,300 580,276 580,324" fill="#b03a1e" opacity=".85"/>
+        <polygon points="300,300 560,206 590,254" fill="#e8dfc8" opacity=".35"/>
+        <polygon points="300,300 500,140 445,110" fill="#b03a1e" opacity=".85"/>
+        <polygon points="300,300 415,70 360,50"  fill="#e8dfc8" opacity=".35"/>
+      </g>
+
+      <!-- sun disc -->
+      <circle cx="300" cy="300" r="80" fill="url(#coreGlow)"/>
+      <!-- subtle horizon line through sun -->
+      <rect x="0" y="298" width="600" height="4" fill="#1a1208" opacity=".7"/>
+      <rect x="0" y="295" width="600" height="3" fill="#cc4422" opacity=".3"/>
+    </svg>
+  </div>
+
+  <!-- Road perspective -->
+  <div class="hero-asphalt">
+    <div class="road-line-l"></div>
+    <div class="road-line-r"></div>
+  </div>
+
+  <div class="hero-content">
+    <span class="hero-eyebrow">motorcycle maintenance &amp; custom fab</span>
+    <h1 class="hero-h1">
+      <span class="r1">Rising Sun</span>
+      <span class="r2">Kustoms</span>
+      <span class="r3">engineer by trade. rider by soul.</span>
+    </h1>
+    <p class="hero-sub">Good work, honest price, no BS.<br>Bring your bike. We'll sort it out.</p>
+    <div class="hero-btns">
+      <a href="#booking" class="btn-tape">Book a Ride-In</a>
+      <a href="#services" class="btn-ghost">see what we do ↓</a>
+    </div>
+  </div>
+
+  <div class="scroll-nudge">keep scrollin' ↓</div>
+</section>
+
+
+<!-- ══ ABOUT ══ -->
+<section id="about">
+  <!-- top rip -->
+  <div class="rip" style="background:#1c1510;">
+    <svg viewBox="0 0 1440 60" preserveAspectRatio="none">
+      <path d="M0,60 L0,30 Q10,24 20,30 Q30,36 40,28 Q50,20 60,29 Q70,38 80,26 Q90,14 100,28 Q110,42 120,30 Q130,18 140,30 Q150,42 160,26 Q170,10 180,28 Q190,46 200,30 Q210,14 220,28 Q230,42 240,26 Q250,10 260,28 Q270,46 280,30 Q290,14 300,28 Q310,42 320,26 Q330,10 340,28 Q350,46 360,30 Q370,14 380,28 Q390,42 400,26 Q410,10 420,28 Q430,46 440,30 Q450,14 460,28 Q470,42 480,26 Q490,10 500,28 Q510,46 520,30 Q530,14 540,28 Q550,42 560,26 Q570,10 580,28 Q590,46 600,30 Q610,14 620,28 Q630,42 640,26 Q650,10 660,28 Q670,46 680,30 Q690,14 700,28 Q710,42 720,26 Q730,10 740,28 Q750,46 760,30 Q770,14 780,28 Q790,42 800,26 Q810,10 820,28 Q830,46 840,30 Q850,14 860,28 Q870,42 880,26 Q890,10 900,28 Q910,46 920,30 Q930,14 940,28 Q950,42 960,26 Q970,10 980,28 Q990,46 1000,30 Q1010,14 1020,28 Q1030,42 1040,26 Q1050,10 1060,28 Q1070,46 1080,30 Q1090,14 1100,28 Q1110,42 1120,26 Q1130,10 1140,28 Q1150,46 1160,30 Q1170,14 1180,28 Q1190,42 1200,26 Q1210,10 1220,28 Q1230,46 1240,30 Q1250,14 1260,28 Q1270,42 1280,26 Q1290,10 1300,28 Q1310,46 1320,30 Q1330,14 1340,28 Q1350,42 1360,26 Q1370,10 1380,28 Q1390,46 1400,30 Q1415,14 1440,28 L1440,60 Z"
+        fill="#1a1510"/>
+    </svg>
+  </div>
+
+  <div class="about-wrap">
+    <div class="sticky sr">
+      <h2>Who's<br>wrenching?</h2>
+      <p>Just a guy who loves bikes and got real tired of paying other shops to do mediocre work on machines he cares about.</p>
+      <p>Engineer by training — <span class="underline">welder by choice</span>. If it rolls on two wheels and needs attention, bring it over. No appointment gimmicks, no upsell nonsense.</p>
+      <p>The shop smells like oil and coffee. The radio's always on. Work gets done right the first time.</p>
+      <ul class="hw-list">
+        <li>Licensed engineer</li>
+        <li>Certified welder</li>
+        <li>Actually rides every week</li>
+        <li>Straight-up honest quotes</li>
+        <li>All makes &amp; models welcome</li>
+      </ul>
+    </div>
+
+    <div class="about-photos">
+      <div class="photo-card sr sr-d1">
+        <div class="pin"></div>
+        <div class="photo-inner">🏍️</div>
+        <div class="photo-caption">fresh out the shop</div>
+      </div>
+      <div class="photo-card sr sr-d2">
+        <div class="pin"></div>
+        <div class="photo-inner">🔥</div>
+        <div class="photo-caption">custom fab — one-off exhaust</div>
+      </div>
+      <div class="photo-card sr sr-d3">
+        <div class="pin"></div>
+        <div class="photo-inner">🛣️</div>
+        <div class="photo-caption">the reason we do this</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══ SERVICES ══ -->
+<section id="services">
+  <div class="services-wrap">
+    <div class="services-top">
+      <div>
+        <span class="section-tag sr">what we wrench on</span>
+        <h2 class="section-h sr sr-d1">The Work</h2>
+      </div>
+      <p class="services-note sr sr-d2">Standard stuff done properly. Custom work built to last. If your bike needs it, we do it — or we'll tell you honestly if we don't.</p>
+    </div>
+
+    <div class="svc-list">
+      <div class="svc-item sr">
+        <div class="svc-num">01</div>
+        <div class="svc-body">
+          <div class="svc-title">Oil &amp; Filter</div>
+          <div class="svc-desc">The basics. Done right. Correct oil weight for your engine, filter replaced, torqued to spec. Not complicated — just done properly.</div>
+          <div class="svc-tags">
+            <span class="svc-tag">All engines</span>
+            <span class="svc-tag">Same day</span>
+          </div>
+        </div>
+        <div class="svc-price">Call for quote</div>
+      </div>
+
+      <div class="svc-item sr sr-d1">
+        <div class="svc-num">02</div>
+        <div class="svc-body">
+          <div class="svc-title">Brakes</div>
+          <div class="svc-desc">Pads, rotors, fluid bleeds, line inspection. Your brakes are the one thing you don't mess around on. We don't.</div>
+          <div class="svc-tags">
+            <span class="svc-tag">Front &amp; rear</span>
+            <span class="svc-tag">ABS capable</span>
+          </div>
+        </div>
+        <div class="svc-price">Call for quote</div>
+      </div>
+
+      <div class="svc-item svc-highlight sr sr-d2">
+        <div class="svc-num">03</div>
+        <div class="svc-body">
+          <div class="svc-title">Tires &amp; Wheels</div>
+          <div class="svc-desc">Mounted, balanced, aligned. Spoke tensioning, wheel trueing. The rubber between you and the road deserves attention.</div>
+          <div class="svc-tags">
+            <span class="svc-tag">All types</span>
+            <span class="svc-tag">Tube &amp; tubeless</span>
+          </div>
+        </div>
+        <div class="svc-price">Call for quote</div>
+      </div>
+
+      <div class="svc-item sr">
+        <div class="svc-num">04</div>
+        <div class="svc-body">
+          <div class="svc-title">Electrical &amp; Diagnostics</div>
+          <div class="svc-desc">Fault codes, wiring gremlins, charging issues, lighting upgrades. Modern bikes are computers. We actually understand them.</div>
+          <div class="svc-tags">
+            <span class="svc-tag">OBD scanning</span>
+            <span class="svc-tag">Wiring repair</span>
+          </div>
+        </div>
+        <div class="svc-price">Call for quote</div>
+      </div>
+
+      <div class="svc-item sr sr-d1">
+        <div class="svc-num">05</div>
+        <div class="svc-body">
+          <div class="svc-title">Suspension &amp; Drivetrain</div>
+          <div class="svc-desc">Fork seals, shock setup, chain and sprocket, belt drives. Dialed to your riding style and your weight — not just a guess.</div>
+          <div class="svc-tags">
+            <span class="svc-tag">Fork oil</span>
+            <span class="svc-tag">Shock rebuild</span>
+            <span class="svc-tag">Chain &amp; sprocket</span>
+          </div>
+        </div>
+        <div class="svc-price">Call for quote</div>
+      </div>
+
+      <div class="svc-item sr sr-d2">
+        <div class="svc-num">06</div>
+        <div class="svc-body">
+          <div class="svc-title">Full Inspection</div>
+          <div class="svc-desc">40-point pre-season or pre-trip safety check. You get a written report. No surprises on the road.</div>
+          <div class="svc-tags">
+            <span class="svc-tag">Full report</span>
+            <span class="svc-tag">Same day</span>
+          </div>
+        </div>
+        <div class="svc-price">Call for quote</div>
+      </div>
+    </div>
+
+    <!-- Welding feature -->
+    <div class="weld-feature sr">
+      <div>
+        <div class="weld-title">Custom Welding<br>&amp; Fabrication</div>
+        <p class="weld-desc">This is the fun part. Need a custom bracket, a one-off exhaust, a hard-tail conversion, a rack for the long haul? Bring your idea. I'm a structural engineer who welds — your custom piece isn't just going to look good, it's going to hold together at highway speed for the next ten years.</p>
+        <div class="svc-tags" style="margin-top:16px;">
+          <span class="svc-tag">Frame fab</span>
+          <span class="svc-tag">Custom exhaust</span>
+          <span class="svc-tag">Brackets &amp; mounts</span>
+          <span class="svc-tag">Frame repair</span>
+          <span class="svc-tag">One-off parts</span>
+        </div>
+      </div>
+      <div class="weld-sparks">🔥</div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══ OPEN ROAD QUOTE ══ -->
+<section id="road">
+  <div class="road-bg"></div>
+  <div class="road-asphalt"></div>
+  <div class="road-stripe"></div>
+  <div class="road-sun-glow"></div>
+  <div class="road-quote sr">
+    <blockquote>
+      Four wheels move the body.<br>
+      <span>Two wheels move the soul.</span>
+    </blockquote>
+    <cite>— that's why we do this</cite>
+  </div>
+</section>
+
+
+<!-- ══ REVIEWS ══ -->
+<section id="reviews">
+  <div class="reviews-wrap">
+    <div class="reviews-header">
+      <span class="section-tag sr">word on the street</span>
+      <h2 class="section-h sr sr-d1">What Riders Say</h2>
+    </div>
+    <div class="reviews-grid">
+      <div class="review-card sr">
+        <div class="review-stars">★★★★★</div>
+        <p class="review-text">Brought my Sportster in with a weird vibration nobody could figure out. He found a cracked motor mount, welded it up, had me back on the road same day. This is the only shop I trust.</p>
+        <div class="review-author">
+          <div class="review-av">M</div>
+          <div>
+            <div class="review-name">Mike R.</div>
+            <div class="review-bike">2018 Harley Sportster</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="review-card sr sr-d1">
+        <div class="review-stars">★★★★★</div>
+        <p class="review-text">Had a custom luggage rack fabbed for my adventure bike. Thing is bulletproof. Perfectly welded, fits like OEM. He's an actual engineer — you can feel the difference.</p>
+        <div class="review-author">
+          <div class="review-av">J</div>
+          <div>
+            <div class="review-name">Jake T.</div>
+            <div class="review-bike">2021 KTM 790 Adventure</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="review-card sr sr-d2">
+        <div class="review-stars">★★★★★</div>
+        <p class="review-text">Told me my air filter was fine and didn't charge me to "check" it. That alone puts him in a different category. Honest dude. Fair price. Good work. I drove 45 min and I'll keep doing it.</p>
+        <div class="review-author">
+          <div class="review-av">D</div>
+          <div>
+            <div class="review-name">Dana K.</div>
+            <div class="review-bike">2019 Honda CB500X</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══ BOOKING ══ -->
+<section id="booking">
+  <div class="booking-wrap">
+    <div class="booking-left">
+      <span class="section-tag sr">let's talk</span>
+      <h2 class="section-h sr sr-d1">Ride it In.</h2>
+      <p class="sr sr-d2">No fancy online scheduling system. No automated hold music. Just reach out, tell me what your bike's doing, and we'll figure out a time. Most maintenance gets done same week.</p>
+
+      <div class="contact-scraps sr sr-d3">
+        <div class="scrap">
+          <span class="scrap-icon">📍</span>
+          <span><strong>Location:</strong> Contact for address — shop's in the garage</span>
+        </div>
+        <div class="scrap">
+          <span class="scrap-icon">⏰</span>
+          <span><strong>Hours:</strong> Mon–Sat by appointment. Call or text first.</span>
+        </div>
+        <div class="scrap">
+          <span class="scrap-icon">📞</span>
+          <span><strong>Phone/Text:</strong> Hit the form or call directly</span>
+        </div>
+        <div class="scrap">
+          <span class="scrap-icon">🏍️</span>
+          <span><strong>All makes welcome</strong> — domestic, import, old, new</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="work-order sr sr-d2">
+      <div class="wo-row">
+        <div class="wo-field">
+          <label class="wo-label">First Name</label>
+          <input class="wo-input" type="text" placeholder="John">
+        </div>
+        <div class="wo-field">
+          <label class="wo-label">Last Name</label>
+          <input class="wo-input" type="text" placeholder="Doe">
+        </div>
+      </div>
+      <div class="wo-row">
+        <div class="wo-field">
+          <label class="wo-label">Phone</label>
+          <input class="wo-input" type="text" placeholder="555-867-5309">
+        </div>
+        <div class="wo-field">
+          <label class="wo-label">Email</label>
+          <input class="wo-input" type="email" placeholder="you@mail.com">
+        </div>
+      </div>
+      <div class="wo-row">
+        <div class="wo-field">
+          <label class="wo-label">Year &amp; Make</label>
+          <input class="wo-input" type="text" placeholder="2003 Harley">
+        </div>
+        <div class="wo-field">
+          <label class="wo-label">Model</label>
+          <input class="wo-input" type="text" placeholder="Road King">
+        </div>
+      </div>
+      <div class="wo-field full" style="margin-bottom:16px;">
+        <label class="wo-label">Service Type</label>
+        <select class="wo-select">
+          <option value="">what do you need?...</option>
+          <option>Oil Change / Basic Maintenance</option>
+          <option>Brakes</option>
+          <option>Tires &amp; Wheels</option>
+          <option>Electrical / Diagnostics</option>
+          <option>Suspension / Drivetrain</option>
+          <option>Safety Inspection</option>
+          <option>Custom Welding / Fabrication</option>
+          <option>Not sure — need a look</option>
+        </select>
+      </div>
+      <div class="wo-field full">
+        <label class="wo-label">What's going on?</label>
+        <textarea class="wo-textarea" placeholder="Describe what the bike's doing (or not doing). More detail = better estimate..."></textarea>
+      </div>
+      <button class="wo-submit" onclick="sendIt(this)">Send it over →</button>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══ FOOTER ══ -->
+<footer>
+  <div class="footer-inner">
+    <div>
+      <span class="footer-brand">Rising Sun Kustoms</span>
+      <p class="footer-tagline">Engineer by trade. Rider by soul. Wrenching because someone's gotta do it right.</p>
+      <div class="footer-socials">
+        <a href="#" class="soc-btn" title="Facebook">f</a>
+        <a href="#" class="soc-btn" title="Instagram">📸</a>
+        <a href="#" class="soc-btn" title="YouTube">▶</a>
+        <a href="#" class="soc-btn" title="TikTok">♪</a>
+      </div>
+    </div>
+
+    <div class="footer-col">
+      <h4>Services</h4>
+      <ul>
+        <li><a href="#services">Oil &amp; Filter</a></li>
+        <li><a href="#services">Brakes</a></li>
+        <li><a href="#services">Tires &amp; Wheels</a></li>
+        <li><a href="#services">Electrical</a></li>
+        <li><a href="#services">Suspension</a></li>
+        <li><a href="#services">Custom Fab</a></li>
+      </ul>
+    </div>
+
+    <div class="footer-col">
+      <h4>The Shop</h4>
+      <ul>
+        <li><a href="#about">About</a></li>
+        <li><a href="#reviews">Reviews</a></li>
+        <li><a href="#booking">Book a Ride-In</a></li>
+        <li><a href="#">Instagram</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    <span class="footer-copy">© 2025 Rising Sun Kustoms — Built in the garage, not a boardroom.</span>
+    <div class="footer-flag">
+      <div class="flag-r"></div>
+      <div class="flag-w"></div>
+      <div class="flag-b"></div>
+    </div>
+  </div>
+</footer>
+
+
+<script>
+/* ── nav scroll ── */
+window.addEventListener('scroll', () => {
+  document.getElementById('nav').style.boxShadow =
+    window.scrollY > 40 ? '0 4px 24px rgba(0,0,0,.7)' : 'none';
+});
+
+/* ── mobile menu ── */
+function toggleNav() {
+  document.getElementById('mob').classList.toggle('open');
+}
+document.addEventListener('click', e => {
+  const m = document.getElementById('mob');
+  const h = document.getElementById('hbg');
+  if (!m.contains(e.target) && !h.contains(e.target)) m.classList.remove('open');
+});
+
+/* ── scroll reveal ── */
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('in'); });
+}, { threshold: 0.1, rootMargin: '0px 0px -36px 0px' });
+document.querySelectorAll('.sr').forEach(el => obs.observe(el));
+
+/* ── smooth links ── */
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', e => {
+    const t = document.querySelector(a.getAttribute('href'));
+    if (t) { e.preventDefault(); t.scrollIntoView({ behavior:'smooth' }); }
+  });
+});
+
+/* ── sun parallax on hero scroll ── */
+const sunWrap = document.querySelector('.hero-sun-wrap');
+window.addEventListener('scroll', () => {
+  if (window.scrollY < window.innerHeight && sunWrap) {
+    sunWrap.style.transform = `translateX(-50%) translateY(${window.scrollY * 0.25}px)`;
+  }
+});
+
+/* ── form submit ── */
+function sendIt(btn) {
+  btn.textContent = '✓ Got it — I\'ll be in touch';
+  btn.style.background = '#2a6b2a';
+  setTimeout(() => {
+    btn.textContent = 'Send it over →';
+    btn.style.background = '';
+  }, 4500);
+}
+</script>
+</body>
+</html>
