@@ -1970,19 +1970,12 @@ function WaitlistAdmin() {
     // Send one email per subscriber
     for (const sub of list) {
       try {
-        await fetch("https://api.resend.com/emails", {
+        await fetch("/api/send-email", {
           method:"POST",
-          headers:{"Authorization":`Bearer ${RESEND_API_KEY}`,"Content-Type":"application/json"},
+          headers:{"Content-Type":"application/json"},
           body:JSON.stringify({
-            from:"Alphaomegatides <noreply@alphaomegatides.com>",
-            to:[sub.email],
-            subject:"🚀 Alphaomegatides — Important Update",
-            html:`<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0e0e0e;color:#fff;padding:32px;border-radius:12px;">
-              <div style="text-align:center;margin-bottom:20px;"><span style="color:#ff6b6b;font-size:2rem;font-weight:900;">α</span><span style="color:#3be8b0;font-size:2rem;font-weight:900;">Ω</span></div>
-              <div style="font-size:0.8rem;color:rgba(255,255,255,0.4);margin-bottom:6px;">Hi ${sub.name || "Researcher"},</div>
-              <div style="white-space:pre-line;color:rgba(255,255,255,0.85);line-height:1.7;font-size:0.9rem;">${blastMsg}</div>
-              <div style="margin-top:24px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.08);font-size:0.7rem;color:rgba(255,255,255,0.25);">Alphaomegatides · alphaomegatides.com · Research use only</div>
-            </div>`,
+            type:"blast",
+            data:{to_email:sub.email, to_name:sub.name, message:blastMsg}
           }),
         });
       } catch {}
@@ -2991,25 +2984,12 @@ function Register({go,onLogin}){
     const u={...f,email:f.email.toLowerCase(),address:{street:f.street,apt:f.apt,city:f.city,state:f.state,zip:f.zip},orders:[],createdAt:new Date().toISOString()};
     users[u.email]=u; saveUsers(users); setSess(u); onLogin(u);
     // Send signup notification to alphaomegatides@yahoo.com
-    fetch("https://api.resend.com/emails",{
+    fetch("/api/send-email",{
       method:"POST",
-      headers:{"Content-Type":"application/json","Authorization":"Bearer re_gNzYdNZU_4Yx2Y916iJb6dSiBniGRchZF"},
+      headers:{"Content-Type":"application/json"},
       body:JSON.stringify({
-        from:"noreply@alphaomegatides.com",
-        to:"alphaomegatides@yahoo.com",
-        reply_to:"noreply@alphaomegatides.com",
-        subject:"🧬 New Account Signup — Alphaomegatides",
-        html:`<div style="font-family:sans-serif;max-width:500px;margin:0 auto;background:#0e0e0e;color:#fff;padding:32px;border-radius:12px;">
-          <h2 style="color:#3be8b0;margin-bottom:4px;">New Member Signup</h2>
-          <p style="color:rgba(255,255,255,0.5);font-size:12px;margin-bottom:24px;">alphaomegatides.com</p>
-          <table style="width:100%;border-collapse:collapse;">
-            <tr><td style="padding:8px 0;color:rgba(255,255,255,0.5);font-size:13px;">Name</td><td style="padding:8px 0;color:#fff;font-size:13px;font-weight:600;">${f.firstName} ${f.lastName}</td></tr>
-            <tr><td style="padding:8px 0;color:rgba(255,255,255,0.5);font-size:13px;">Email</td><td style="padding:8px 0;color:#fff;font-size:13px;">${f.email}</td></tr>
-            <tr><td style="padding:8px 0;color:rgba(255,255,255,0.5);font-size:13px;">Phone</td><td style="padding:8px 0;color:#fff;font-size:13px;">${f.phone||"—"}</td></tr>
-            <tr><td style="padding:8px 0;color:rgba(255,255,255,0.5);font-size:13px;">Address</td><td style="padding:8px 0;color:#fff;font-size:13px;">${f.street}${f.apt?", "+f.apt:""}, ${f.city}, ${f.state} ${f.zip}</td></tr>
-            <tr><td style="padding:8px 0;color:rgba(255,255,255,0.5);font-size:13px;">Signed Up</td><td style="padding:8px 0;color:#fff;font-size:13px;">${new Date().toLocaleString()}</td></tr>
-          </table>
-        </div>`
+        type:"account_signup",
+        data:{fname:f.fname,lname:f.lname,email:f.email,phone:f.phone,street:f.street,apt:f.apt,city:f.city,state:f.state,zip:f.zip}
       })
     }).catch(()=>{});
     go("dashboard");
@@ -3018,7 +2998,7 @@ function Register({go,onLogin}){
   return <div style={{paddingTop:70,minHeight:"100vh",background:"#0e0e0e",display:"flex",alignItems:"center",justifyContent:"center",padding:"100px 20px 60px"}}>
     <div style={{background:"#1a1a1a",borderRadius:24,padding:40,maxWidth:520,width:"100%",border:"1px solid rgba(255,255,255,0.08)",boxShadow:"0 16px 48px rgba(0,0,0,0.5)"}}>
       <div style={{textAlign:"center",marginBottom:28}}>
-        <div style={{fontFamily:"'Syne',sans-serif",fontSize:"1.4rem",fontWeight:800,marginBottom:3}}>NeX<span style={{color:"#3be8b0"}}>GPT</span></div>
+        <div style={{fontFamily:"'Syne',sans-serif",fontSize:"1.4rem",fontWeight:800,marginBottom:3}}>Alpha<span style={{color:"#ff6b6b"}}>ω</span><span style={{color:"#3be8b0"}}>mega</span>tides</div>
         <div style={{fontFamily:"'Syne',sans-serif",fontSize:"1.55rem",fontWeight:800,letterSpacing:"-.03em"}}>Create Account</div>
         <div style={{fontSize:"0.8rem",color:C.muted,marginTop:4}}>🇺🇸 US researchers only · Domestic fulfillment only</div>
       </div>
@@ -3075,7 +3055,7 @@ function Login({go,onLogin}){
   return <div style={{paddingTop:70,minHeight:"100vh",background:"#0e0e0e",display:"flex",alignItems:"center",justifyContent:"center",padding:"100px 20px 60px"}}>
     <div style={{background:"#1a1a1a",borderRadius:24,padding:40,maxWidth:400,width:"100%",border:"1px solid rgba(255,255,255,0.08)",boxShadow:"0 16px 48px rgba(0,0,0,0.5)"}}>
       <div style={{textAlign:"center",marginBottom:28}}>
-        <div style={{fontFamily:"'Syne',sans-serif",fontSize:"1.4rem",fontWeight:800,marginBottom:3}}>NeX<span style={{color:"#3be8b0"}}>GPT</span></div>
+        <div style={{fontFamily:"'Syne',sans-serif",fontSize:"1.4rem",fontWeight:800,marginBottom:3}}>Alpha<span style={{color:"#ff6b6b"}}>ω</span><span style={{color:"#3be8b0"}}>mega</span>tides</div>
         <div style={{fontFamily:"'Syne',sans-serif",fontSize:"1.55rem",fontWeight:800,letterSpacing:"-.03em"}}>Welcome Back</div>
         <div style={{fontSize:"0.8rem",color:C.muted,marginTop:4}}>Sign in to your account</div>
       </div>
@@ -4773,45 +4753,13 @@ function isRateLimited(email: string): boolean {
 
 async function sendWaitlistEmail(data: {name:string,email:string,interests?:string[],source?:string}) {
   if (isRateLimited(data.email)) { console.warn("Rate limited:", data.email); return; }
-  const interestList = data.interests && data.interests.length > 0
-    ? data.interests.join(", ")
-    : "Not specified";
   try {
-    await fetch("https://api.resend.com/emails", {
+    await fetch("/api/send-email", {
       method: "POST",
-      headers: {
-        "Authorization": `Bearer ${RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: "Alphaomegatides Waitlist <noreply@alphaomegatides.com>",
-        to: [NOTIFY_EMAIL],
-        reply_to: data.email,
-        subject: `🧬 New Waitlist Signup — ${data.name}`,
-        html: `
-          <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0e0e0e;color:#fff;padding:32px;border-radius:12px;">
-            <div style="text-align:center;margin-bottom:24px;">
-              <span style="font-size:2rem;color:#ff6b6b;font-weight:900;">α</span>
-              <span style="font-size:2rem;color:#3be8b0;font-weight:900;">Ω</span>
-              <div style="color:rgba(255,255,255,0.5);font-size:0.8rem;margin-top:4px;letter-spacing:0.1em;">ALPHAOMEGATIDES</div>
-            </div>
-            <div style="background:#1a1a1a;border-radius:10px;padding:24px;border:1px solid rgba(59,232,176,0.2);">
-              <div style="color:#3be8b0;font-size:0.75rem;font-weight:700;letter-spacing:0.15em;margin-bottom:8px;">NEW POTENTIAL CUSTOMER</div>
-              <table style="width:100%;border-collapse:collapse;">
-                <tr><td style="padding:8px 0;color:rgba(255,255,255,0.5);font-size:0.85rem;width:120px;">Name</td><td style="padding:8px 0;color:#fff;font-weight:600;">${data.name}</td></tr>
-                <tr><td style="padding:8px 0;color:rgba(255,255,255,0.5);font-size:0.85rem;">Email</td><td style="padding:8px 0;color:#fff;font-weight:600;"><a href="mailto:${data.email}" style="color:#4f8ef7;">${data.email}</a></td></tr>
-                <tr><td style="padding:8px 0;color:rgba(255,255,255,0.5);font-size:0.85rem;">Source</td><td style="padding:8px 0;color:#fff;">${data.source || "Checkout intercept"}</td></tr>
-                <tr><td style="padding:8px 0;color:rgba(255,255,255,0.5);font-size:0.85rem;vertical-align:top;">Interests</td><td style="padding:8px 0;color:#ffd166;font-weight:600;">${interestList}</td></tr>
-              </table>
-            </div>
-            <div style="margin-top:16px;padding:12px;background:rgba(255,107,107,0.1);border-radius:8px;font-size:0.75rem;color:rgba(255,255,255,0.4);text-align:center;">
-              Alphaomegatides · alphaomegatides.com · For research use only
-            </div>
-          </div>
-        `,
-      }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "notify", data }),
     });
-  } catch(e) { console.error("Resend error:", e); }
+  } catch(e) { console.error("Email error:", e); }
 }
 
 // ── COMING SOON / WAITLIST MODAL ─────────────────────────────────
