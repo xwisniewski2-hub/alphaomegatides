@@ -2,7 +2,7 @@
 // Handles ALL outbound emails for Alphaomegatides via Resend
 // Called from App.tsx — never calls Resend directly from the browser
 
-const RESEND_API_KEY = process.env.VITE_RESEND_KEY || "re_gNzYdNZU_4Yx2Y916iJb6dSiBniGRchZF";
+const RESEND_API_KEY = process.env.RESEND_KEY || "re_gNzYdNZU_4Yx2Y916iJb6dSiBniGRchZF";
 const NOTIFY_EMAIL   = "alphaomegatides@yahoo.com";
 
 export default async function handler(req, res) {
