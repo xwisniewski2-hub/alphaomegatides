@@ -27,7 +27,7 @@ export default async function handler(req, res) {
     const { name, email, interests, source } = data;
     const interestList = interests?.length ? interests.join(", ") : "Not specified";
     payload = {
-      from: "Alphaomegatides <onboarding@resend.dev>",
+      from: "Alphaomegatides <noreply@alphaomegatides.com>",
       to: [NOTIFY_EMAIL],
       reply_to: email,
       subject: `🧬 ${source || "New Signup"} — ${name}`,
@@ -59,7 +59,7 @@ export default async function handler(req, res) {
   else if (type === "account_signup") {
     const { fname, lname, email, phone, street, apt, city, state, zip } = data;
     payload = {
-      from: "Alphaomegatides <onboarding@resend.dev>",
+      from: "Alphaomegatides <noreply@alphaomegatides.com>",
       to: [NOTIFY_EMAIL],
       reply_to: email,
       subject: `🧬 New Account Signup — ${fname} ${lname}`,
@@ -89,7 +89,7 @@ export default async function handler(req, res) {
   else if (type === "blast") {
     const { to_email, to_name, message } = data;
     payload = {
-      from: "Alphaomegatides <onboarding@resend.dev>",
+      from: "Alphaomegatides <noreply@alphaomegatides.com>",
       to: [to_email],
       subject: "🚀 Alphaomegatides — Important Update",
       html: `
