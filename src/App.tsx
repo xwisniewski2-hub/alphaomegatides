@@ -986,7 +986,7 @@ function Nav({user,go,onLogout,cartCount}){
             :[{icon:"👤",label:"Sign In",action:()=>{go("login");close();}},
               {icon:"✨",label:"Create Account",action:()=>{go("register");close();}}]
           ),
-          {icon:"💬",label:"Community Chat",action:()=>{go("chat");close();}},{icon:"🔬",label:"COA Library",action:()=>{go("coa");close();}},{icon:"📚",label:"Research Library",action:()=>{go("research");close();}},
+          {icon:"💬",label:"Community Chat",action:()=>{go("chat");close();}},{icon:"𝕏",label:"X Community",action:()=>{go("xcommunity");close();}},{icon:"🔬",label:"COA Library",action:()=>{go("coa");close();}},{icon:"📚",label:"Research Library",action:()=>{go("research");close();}},
           {icon:"⚖️",label:"Legal & Compliance",action:()=>{go("compliance");close();}},
           {icon:"🎯",label:"Find My Compound",action:()=>{go("quiz");close();}},
           {icon:"📦",label:"Track My Order",action:()=>{go("track");close();}},
@@ -4193,7 +4193,7 @@ function SiteFooter({go}){
         </div>
         <div>
           <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,color:"rgba(255,255,255,0.7)",fontSize:"0.8rem",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:14}}>Company</div>
-          {[["Contact",()=>go("contact")],["Community Chat",()=>go("chat")],["COA Library",()=>go("coa")],["Research Stacks",()=>go("bundles")],["Find My Compound",()=>go("quiz")],["Protocol Guides",()=>go("protocols")],["Track Order",()=>go("track")],["Sign In",()=>go("login")]].map(([l,fn])=>(
+          {[["Contact",()=>go("contact")],["Community Chat",()=>go("chat")],["X Community",()=>go("xcommunity")],["COA Library",()=>go("coa")],["Research Stacks",()=>go("bundles")],["Find My Compound",()=>go("quiz")],["Protocol Guides",()=>go("protocols")],["Track Order",()=>go("track")],["Sign In",()=>go("login")]].map(([l,fn])=>(
             <div key={l} onClick={fn} style={{cursor:"pointer",marginBottom:9,color:"rgba(255,255,255,0.4)",fontSize:"0.8rem",transition:"color .2s"}} onMouseEnter={e=>e.target.style.color="#fff"} onMouseLeave={e=>e.target.style.color="rgba(255,255,255,0.4)"}>{l}</div>
           ))}
         </div>
@@ -6694,7 +6694,360 @@ async function fbToggleReaction(msgId: string, emoji: string, userEmail: string)
   } catch(e) { console.error("Reaction failed:", e); }
 }
 
+// ═══════════════════════════════════════════════════════════════
+// MEMBER COMMUNITY CHAT v7 — Firebase Realtime Database
+// Channels · Typing · Online presence · Search · Pin · React
+// Admin panel: view all members, mute, allow, ban
+// ═══════════════════════════════════════════════════════════════
+const FB_CONFIG = { databaseURL: "https://alphaomegatides-chat-default-rtdb.firebaseio.com" };
+const FB_CHAT_PATH   = "/chat/messages";
+const FB_TYPING_PATH = "/chat/typing";
+const FB_ONLINE_PATH = "/chat/online";
+const FB_MEMBERS_PATH = "/chat/members"; // stores all seen members + their status
+const FB_URL = (path:string) => `${FB_CONFIG.databaseURL}${path}.json`;
+
+const CHAT_CHANNELS = [
+  { id:"general",  label:"General",  icon:"💬", desc:"Open discussion" },
+  { id:"research", label:"Research", icon:"🔬", desc:"Protocol talk" },
+  { id:"stacks",   label:"Stacks",   icon:"⚗️",  desc:"Compound combos" },
+  { id:"results",  label:"Results",  icon:"📊", desc:"Research outcomes" },
+];
+
+interface ChatMessage {
+  id?: string;
+  userEmail: string;
+  userName: string;
+  isAdmin: boolean;
+  text: string;
+  imageData?: string;
+  fileName?: string;
+  fileData?: string;
+  fileType?: string;
+  timestamp: number;
+  channel?: string;
+  replyTo?: { id: string; userName: string; text: string; imageData?: string };
+  reactions?: { [emoji: string]: string[] };
+  pinned?: boolean;
+}
+
+interface ChatMember {
+  email: string;
+  userName: string;
+  lastSeen: number;
+  status: "active" | "muted" | "banned";
+  messageCount?: number;
+}
+
+// ── Firebase helpers ────────────────────────────────────────────
+async function fbPost(msg: Omit<ChatMessage,"id">, channel="general"): Promise<void> {
+  try {
+    await fetch(`${FB_CONFIG.databaseURL}/chat/channels/${channel}/messages.json`, {
+      method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(msg),
+    });
+  } catch(e) { console.error("Chat post failed:", e); }
+}
+
+async function fbGetMessages(channel="general"): Promise<ChatMessage[]> {
+  try {
+    const res = await fetch(`${FB_CONFIG.databaseURL}/chat/channels/${channel}/messages.json?orderBy="timestamp"&limitToLast=120`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!data || typeof data !== "object") return [];
+    return Object.entries(data).map(([id,val]:any)=>({...val,id,channel})).sort((a,b)=>a.timestamp-b.timestamp);
+  } catch { return []; }
+}
+
+async function fbDeleteMessage(id: string, channel="general"): Promise<void> {
+  try { await fetch(`${FB_CONFIG.databaseURL}/chat/channels/${channel}/messages/${id}.json`,{method:"DELETE"}); } catch {}
+}
+
+async function fbToggleReaction(msgId: string, emoji: string, userEmail: string, channel="general"): Promise<void> {
+  try {
+    const res = await fetch(`${FB_CONFIG.databaseURL}/chat/channels/${channel}/messages/${msgId}.json`);
+    if (!res.ok) return;
+    const msg = await res.json(); if (!msg) return;
+    const reactions = msg.reactions || {};
+    const users: string[] = reactions[emoji] || [];
+    const idx = users.indexOf(userEmail);
+    if (idx>=0) users.splice(idx,1); else users.push(userEmail);
+    if (users.length===0) delete reactions[emoji]; else reactions[emoji]=users;
+    await fetch(`${FB_CONFIG.databaseURL}/chat/channels/${channel}/messages/${msgId}.json`,{
+      method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify({reactions}),
+    });
+  } catch {}
+}
+
+async function fbSetTyping(email: string, name: string, isTyping: boolean): Promise<void> {
+  try {
+    const key = email.replace(/[.@]/g,"_");
+    if (isTyping) {
+      await fetch(`${FB_CONFIG.databaseURL}${FB_TYPING_PATH}/${key}.json`,{
+        method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify({name,ts:Date.now()}),
+      });
+    } else {
+      await fetch(`${FB_CONFIG.databaseURL}${FB_TYPING_PATH}/${key}.json`,{method:"DELETE"});
+    }
+  } catch {}
+}
+
+async function fbSetOnline(email: string, name: string, online: boolean): Promise<void> {
+  try {
+    const key = email.replace(/[.@]/g,"_");
+    if (online) {
+      await fetch(`${FB_CONFIG.databaseURL}${FB_ONLINE_PATH}/${key}.json`,{
+        method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify({name,ts:Date.now()}),
+      });
+    } else {
+      await fetch(`${FB_CONFIG.databaseURL}${FB_ONLINE_PATH}/${key}.json`,{method:"DELETE"});
+    }
+  } catch {}
+}
+
+async function fbGetOnline(): Promise<{name:string;ts:number}[]> {
+  try {
+    const res = await fetch(FB_URL(FB_ONLINE_PATH));
+    if (!res.ok) return [];
+    const data = await res.json(); if (!data) return [];
+    const cutoff = Date.now()-90000;
+    return Object.values(data).filter((u:any)=>u.ts>cutoff) as any[];
+  } catch { return []; }
+}
+
+async function fbGetTyping(myEmail: string): Promise<string[]> {
+  try {
+    const res = await fetch(FB_URL(FB_TYPING_PATH));
+    if (!res.ok) return [];
+    const data = await res.json(); if (!data) return [];
+    const cutoff = Date.now()-5000;
+    return Object.values(data).filter((u:any)=>u.ts>cutoff&&u.name!==myEmail).map((u:any)=>u.name);
+  } catch { return []; }
+}
+
+// ── Member management (admin) ───────────────────────────────────
+async function fbRegisterMember(email: string, name: string): Promise<void> {
+  try {
+    const key = email.replace(/[.@]/g,"_");
+    const res = await fetch(`${FB_CONFIG.databaseURL}${FB_MEMBERS_PATH}/${key}.json`);
+    const existing = res.ok ? await res.json() : null;
+    if (existing && existing.status === "banned") return; // don't overwrite ban
+    await fetch(`${FB_CONFIG.databaseURL}${FB_MEMBERS_PATH}/${key}.json`,{
+      method:"PATCH", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({ email, userName:name, lastSeen:Date.now(), status: existing?.status||"active", messageCount:(existing?.messageCount||0)+1 }),
+    });
+  } catch {}
+}
+
+async function fbGetAllMembers(): Promise<ChatMember[]> {
+  try {
+    const res = await fetch(FB_URL(FB_MEMBERS_PATH));
+    if (!res.ok) return [];
+    const data = await res.json(); if (!data) return [];
+    return Object.values(data) as ChatMember[];
+  } catch { return []; }
+}
+
+async function fbSetMemberStatus(email: string, status: "active"|"muted"|"banned"): Promise<void> {
+  try {
+    const key = email.replace(/[.@]/g,"_");
+    await fetch(`${FB_CONFIG.databaseURL}${FB_MEMBERS_PATH}/${key}.json`,{
+      method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify({status}),
+    });
+  } catch {}
+}
+
+async function fbCheckMemberStatus(email: string): Promise<"active"|"muted"|"banned"> {
+  try {
+    const key = email.replace(/[.@]/g,"_");
+    const res = await fetch(`${FB_CONFIG.databaseURL}${FB_MEMBERS_PATH}/${key}.json`);
+    if (!res.ok) return "active";
+    const data = await res.json();
+    return data?.status || "active";
+  } catch { return "active"; }
+}
+
+// ── Admin member panel ──────────────────────────────────────────
+function ChatMemberPanel({onClose, currentUserEmail}: {onClose:()=>void; currentUserEmail:string}) {
+  const [members, setMembers]   = useState<ChatMember[]>([]);
+  const [loading, setLoading]   = useState(true);
+  const [filter, setFilter]     = useState<"all"|"active"|"muted"|"banned">("all");
+  const [search, setSearch]     = useState("");
+  const [saving, setSaving]     = useState<string|null>(null);
+  const [online, setOnline]     = useState<string[]>([]);
+
+  const accentG="#3be8b0", accentR="#ff6b6b", accentY="#ffd166", accentB="#4f8ef7";
+  const bg="#0e0e0e", card="#161616", border="rgba(255,255,255,0.08)", muted="rgba(255,255,255,0.38)";
+
+  const load = async () => {
+    const [all, onlineList] = await Promise.all([fbGetAllMembers(), fbGetOnline()]);
+    setMembers(all.sort((a,b)=>b.lastSeen-a.lastSeen));
+    setOnline(onlineList.map((u:any)=>u.name));
+    setLoading(false);
+  };
+
+  useEffect(()=>{ load(); const iv=setInterval(load,8000); return()=>clearInterval(iv); },[]);
+
+  const handleStatus = async (member: ChatMember, status: "active"|"muted"|"banned") => {
+    if (member.email === currentUserEmail) { alert("You can't change your own status."); return; }
+    setSaving(member.email);
+    await fbSetMemberStatus(member.email, status);
+    await load();
+    setSaving(null);
+  };
+
+  const filtered = members.filter(m => {
+    if (filter!=="all" && m.status!==filter) return false;
+    if (search && !m.userName?.toLowerCase().includes(search.toLowerCase()) && !m.email?.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+
+  const statusColor = (s:string) => s==="banned"?accentR:s==="muted"?accentY:accentG;
+  const statusBg    = (s:string) => s==="banned"?"rgba(255,107,107,0.12)":s==="muted"?"rgba(255,209,102,0.12)":"rgba(59,232,176,0.10)";
+  const statusIcon  = (s:string) => s==="banned"?"🚫":s==="muted"?"🔇":"✅";
+  const timeAgo = (ts:number) => {
+    const d=Date.now()-ts, m=Math.floor(d/60000), h=Math.floor(d/3600000), dy=Math.floor(d/86400000);
+    if (d<60000) return "just now"; if (m<60) return `${m}m ago`; if (h<24) return `${h}h ago`; return `${dy}d ago`;
+  };
+  const avatarCol = (email:string) => {
+    const cols=["#3be8b0","#ff6b6b","#4f8ef7","#ffd166","#a855f7","#f59e0b","#ec4899"];
+    let h=0; for(const c of (email||"")) h=(h*31+c.charCodeAt(0))%cols.length;
+    return cols[Math.abs(h)];
+  };
+  const initials = (name:string) => (name||"?").split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
+
+  const counts = { all:members.length, active:members.filter(m=>m.status==="active").length, muted:members.filter(m=>m.status==="muted").length, banned:members.filter(m=>m.status==="banned").length };
+
+  return (
+    <div style={{position:"fixed" as const,inset:0,zIndex:9999,background:"rgba(0,0,0,0.85)",backdropFilter:"blur(8px)",display:"flex",alignItems:"flex-start",justifyContent:"center",paddingTop:20,paddingBottom:20}}>
+      <style>{`
+        @keyframes panelIn { from{opacity:0;transform:translateY(12px) scale(0.97);} to{opacity:1;transform:translateY(0) scale(1);} }
+        .member-row:hover { background: rgba(255,255,255,0.04) !important; }
+        .status-btn:hover { filter: brightness(1.2); transform: scale(1.05); }
+      `}</style>
+      <div style={{background:bg,border:"1px solid rgba(255,255,255,0.1)",borderRadius:20,width:"min(680px,96vw)",maxHeight:"90vh",display:"flex",flexDirection:"column",boxShadow:"0 24px 80px rgba(0,0,0,0.8)",animation:"panelIn .22s ease-out",overflow:"hidden"}}>
+
+        {/* Header */}
+        <div style={{padding:"18px 20px 14px",borderBottom:"1px solid "+border,display:"flex",alignItems:"center",gap:12,flexShrink:0}}>
+          <div style={{width:38,height:38,borderRadius:12,background:"rgba(255,107,107,0.15)",border:"1px solid rgba(255,107,107,0.25)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.1rem"}}>👥</div>
+          <div style={{flex:1}}>
+            <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1.05rem",color:"#fff"}}>Member Management</div>
+            <div style={{fontSize:"0.7rem",color:muted}}>{members.length} total members · {counts.active} active · {online.length} online now</div>
+          </div>
+          <button onClick={onClose} style={{background:"rgba(255,255,255,0.07)",border:"1px solid "+border,color:"rgba(255,255,255,0.5)",borderRadius:10,width:32,height:32,cursor:"pointer",fontSize:"0.9rem",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+        </div>
+
+        {/* Stats row */}
+        <div style={{display:"flex",gap:0,borderBottom:"1px solid "+border,flexShrink:0}}>
+          {(["all","active","muted","banned"] as const).map(f=>(
+            <button key={f} onClick={()=>setFilter(f)}
+              style={{flex:1,padding:"10px 4px",background:filter===f?statusBg(f==="all"?"active":f):"transparent",border:"none",cursor:"pointer",borderBottom:filter===f?"2px solid "+(f==="all"?accentG:statusColor(f)):"2px solid transparent",transition:"all .15s"}}>
+              <div style={{fontSize:"1rem"}}>{f==="all"?"👥":statusIcon(f)}</div>
+              <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"0.95rem",color:f==="all"?"#fff":statusColor(f)}}>{counts[f]}</div>
+              <div style={{fontSize:"0.62rem",color:muted,textTransform:"capitalize" as const}}>{f}</div>
+            </button>
+          ))}
+        </div>
+
+        {/* Search */}
+        <div style={{padding:"10px 16px",borderBottom:"1px solid "+border,flexShrink:0}}>
+          <div style={{position:"relative" as const}}>
+            <span style={{position:"absolute" as const,left:10,top:"50%",transform:"translateY(-50%)",color:muted,fontSize:"0.82rem"}}>🔍</span>
+            <input value={search} onChange={e=>setSearch(e.target.value)}
+              placeholder="Search by name or email…"
+              style={{width:"100%",background:"rgba(255,255,255,0.04)",border:"1px solid "+border,borderRadius:10,padding:"8px 12px 8px 30px",color:"#fff",fontFamily:"'DM Sans',sans-serif",fontSize:"0.85rem",outline:"none",boxSizing:"border-box" as const}}/>
+            {search && <button onClick={()=>setSearch("")} style={{position:"absolute" as const,right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:muted,cursor:"pointer"}}>✕</button>}
+          </div>
+        </div>
+
+        {/* Member list */}
+        <div style={{flex:1,overflowY:"auto",padding:"6px 0"}}>
+          {loading && (
+            <div style={{textAlign:"center",padding:40,color:muted,fontSize:"0.85rem"}}>Loading members…</div>
+          )}
+          {!loading && filtered.length===0 && (
+            <div style={{textAlign:"center",padding:40,color:muted,fontSize:"0.85rem"}}>No members found</div>
+          )}
+          {filtered.map(member=>{
+            const isOnline = online.includes(member.userName);
+            const isSelf   = member.email===currentUserEmail;
+            return (
+              <div key={member.email} className="member-row"
+                style={{display:"flex",alignItems:"center",gap:12,padding:"10px 18px",transition:"background .12s",borderBottom:"1px solid rgba(255,255,255,0.03)"}}>
+
+                {/* Avatar */}
+                <div style={{position:"relative" as const,flexShrink:0}}>
+                  <div style={{width:38,height:38,borderRadius:"50%",background:member.status==="banned"?"#2a1a1a":avatarCol(member.email),display:"flex",alignItems:"center",justifyContent:"center",fontSize:"0.72rem",fontWeight:800,color:member.status==="banned"?"rgba(255,255,255,0.3)":"#0e0e0e",filter:member.status==="banned"?"grayscale(1) opacity(0.5)":"none"}}>
+                    {member.status==="banned"?"🚫":initials(member.userName)}
+                  </div>
+                  {isOnline && member.status!=="banned" && (
+                    <span style={{position:"absolute" as const,bottom:0,right:0,width:10,height:10,borderRadius:"50%",background:accentG,border:"2px solid "+bg}}/>
+                  )}
+                </div>
+
+                {/* Info */}
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
+                    <span style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"0.88rem",color:member.status==="banned"?"rgba(255,255,255,0.3)":"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const,maxWidth:160}}>
+                      {member.userName}
+                    </span>
+                    {isSelf && <span style={{background:"rgba(59,232,176,0.15)",color:accentG,fontSize:"0.58rem",fontWeight:700,padding:"1px 6px",borderRadius:100,flexShrink:0}}>YOU</span>}
+                    {isOnline && <span style={{fontSize:"0.58rem",color:accentG,fontWeight:600,flexShrink:0}}>● LIVE</span>}
+                    <span style={{background:statusBg(member.status||"active"),color:statusColor(member.status||"active"),fontSize:"0.58rem",fontWeight:700,padding:"1px 7px",borderRadius:100,flexShrink:0,letterSpacing:"0.04em"}}>
+                      {(member.status||"active").toUpperCase()}
+                    </span>
+                  </div>
+                  <div style={{fontSize:"0.68rem",color:muted,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>
+                    {member.email} · {member.messageCount||0} msgs · {timeAgo(member.lastSeen)}
+                  </div>
+                </div>
+
+                {/* Action buttons — only if not self */}
+                {!isSelf && (
+                  <div style={{display:"flex",gap:5,flexShrink:0}}>
+                    {member.status!=="active" && (
+                      <button className="status-btn"
+                        disabled={saving===member.email}
+                        onClick={()=>handleStatus(member,"active")}
+                        title="Allow"
+                        style={{background:"rgba(59,232,176,0.12)",border:"1px solid rgba(59,232,176,0.25)",color:accentG,borderRadius:8,padding:"5px 10px",cursor:"pointer",fontSize:"0.72rem",fontWeight:700,transition:"all .15s",opacity:saving===member.email?.5:1}}>
+                        ✅ Allow
+                      </button>
+                    )}
+                    {member.status!=="muted" && (
+                      <button className="status-btn"
+                        disabled={saving===member.email}
+                        onClick={()=>handleStatus(member,"muted")}
+                        title="Mute"
+                        style={{background:"rgba(255,209,102,0.1)",border:"1px solid rgba(255,209,102,0.25)",color:accentY,borderRadius:8,padding:"5px 10px",cursor:"pointer",fontSize:"0.72rem",fontWeight:700,transition:"all .15s",opacity:saving===member.email?.5:1}}>
+                        🔇 Mute
+                      </button>
+                    )}
+                    {member.status!=="banned" && (
+                      <button className="status-btn"
+                        disabled={saving===member.email}
+                        onClick={()=>{ if(window.confirm(`Ban ${member.userName}? They won't be able to post.`)) handleStatus(member,"banned"); }}
+                        title="Ban"
+                        style={{background:"rgba(255,107,107,0.1)",border:"1px solid rgba(255,107,107,0.22)",color:accentR,borderRadius:8,padding:"5px 10px",cursor:"pointer",fontSize:"0.72rem",fontWeight:700,transition:"all .15s",opacity:saving===member.email?.5:1}}>
+                        🚫 Ban
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Footer note */}
+        <div style={{padding:"10px 18px",borderTop:"1px solid "+border,fontSize:"0.65rem",color:muted,textAlign:"center",flexShrink:0}}>
+          Muted members can view chat but cannot post · Banned members are blocked entirely · Changes take effect immediately
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MemberChatPage({go, user}: {go: Function; user: any}) {
+  const [channel, setChannel]       = useState("general");
   const [messages, setMessages]     = useState<ChatMessage[]>([]);
   const [text, setText]             = useState("");
   const [loading, setLoading]       = useState(true);
@@ -6706,288 +7059,432 @@ function MemberChatPage({go, user}: {go: Function; user: any}) {
   const [replyTo, setReplyTo]       = useState<ChatMessage|null>(null);
   const [lightboxSrc, setLightbox]  = useState<string|null>(null);
   const [showEmojiFor, setShowEmojiFor] = useState<string|null>(null);
+  const [searchQuery, setSearchQuery]   = useState("");
+  const [showSearch, setShowSearch]     = useState(false);
+  const [onlineUsers, setOnlineUsers]   = useState<{name:string}[]>([]);
+  const [typingUsers, setTypingUsers]   = useState<string[]>([]);
+  const [showChannels, setShowChannels] = useState(false);
+  const [pinnedMsg, setPinnedMsg]       = useState<ChatMessage|null>(null);
+  const [showPinned, setShowPinned]     = useState(false);
+  const [copiedId, setCopiedId]         = useState<string|null>(null);
+  const [showOnline, setShowOnline]     = useState(false);
+  const [showMemberPanel, setShowMemberPanel] = useState(false);
+  const [myStatus, setMyStatus]         = useState<"active"|"muted"|"banned">("active");
   const bottomRef    = useRef<HTMLDivElement>(null);
   const inputRef     = useRef<HTMLTextAreaElement>(null);
   const imgInputRef  = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastCount    = useRef(0);
   const pollerRef    = useRef<any>(null);
+  const typingTimer  = useRef<any>(null);
+  const onlineRef    = useRef<any>(null);
 
-  const accentG = "#3be8b0";
-  const accentR = "#ff6b6b";
-  const bg      = "#0e0e0e";
-  const card2   = "#242424";
-  const muted   = "rgba(255,255,255,0.38)";
-  const myBubble    = "linear-gradient(135deg,#1a3a2a,#1e4a34)";
-  const theirBubble = card2;
+  const accentG="#3be8b0", accentR="#ff6b6b", bg="#0e0e0e", card2="#1a1a1a";
+  const glass="rgba(255,255,255,0.04)", border="rgba(255,255,255,0.08)", muted="rgba(255,255,255,0.38)";
+  const ch = CHAT_CHANNELS.find(c=>c.id===channel)||CHAT_CHANNELS[0];
 
   const loadMessages = async (scrollToBottom=false) => {
-    const msgs = await fbGetMessages();
-    if (msgs.length !== lastCount.current || scrollToBottom) {
-      setMessages(msgs);
-      lastCount.current = msgs.length;
-      if (scrollToBottom || msgs.length !== lastCount.current) {
-        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 80);
-      }
+    const msgs = await fbGetMessages(channel);
+    if (msgs.length!==lastCount.current||scrollToBottom) {
+      setMessages(msgs); lastCount.current=msgs.length;
+      if (scrollToBottom) setTimeout(()=>bottomRef.current?.scrollIntoView({behavior:"smooth"}),80);
     }
+    const pin=msgs.find(m=>m.pinned);
+    if (pin) setPinnedMsg(pin); else setPinnedMsg(null);
     setLoading(false);
   };
 
-  useEffect(() => {
+  const loadPresence = async () => {
+    const [online, typing] = await Promise.all([fbGetOnline(), fbGetTyping(user?.email||"")]);
+    setOnlineUsers(online);
+    setTypingUsers(typing);
+  };
+
+  useEffect(()=>{
+    setLoading(true); lastCount.current=0;
     loadMessages(true);
-    pollerRef.current = setInterval(() => loadMessages(false), 3000);
-    return () => clearInterval(pollerRef.current);
-  }, []);
+    pollerRef.current=setInterval(()=>{loadMessages(false);loadPresence();},2500);
+    return()=>clearInterval(pollerRef.current);
+  },[channel]);
+
+  useEffect(()=>{
+    if (!user?.email) return;
+    // Check own status
+    fbCheckMemberStatus(user.email).then(setMyStatus);
+    fbSetOnline(user.email, user.name||user.email.split("@")[0], true);
+    fbRegisterMember(user.email, user.name||user.email.split("@")[0]);
+    onlineRef.current=setInterval(()=>{
+      fbSetOnline(user.email, user.name||user.email.split("@")[0], true);
+      fbCheckMemberStatus(user.email).then(setMyStatus);
+    },30000);
+    const handleUnload=()=>fbSetOnline(user.email, user.name, false);
+    window.addEventListener("beforeunload", handleUnload);
+    return()=>{ clearInterval(onlineRef.current); fbSetOnline(user.email,user.name,false); window.removeEventListener("beforeunload",handleUnload); };
+  },[user?.email]);
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setText(e.target.value);
+    if (!user?.email||myStatus!=="active") return;
+    clearTimeout(typingTimer.current);
+    fbSetTyping(user.email, user.name||user.email.split("@")[0], true);
+    typingTimer.current=setTimeout(()=>fbSetTyping(user.email,user.name,false),3000);
+  };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { alert("Images must be under 2MB."); e.target.value=""; return; }
-    const reader = new FileReader();
-    reader.onload = () => { const r=reader.result as string; setImgData(r); setImgPrev(r); };
-    reader.readAsDataURL(file);
-    e.target.value = "";
+    const file=e.target.files?.[0]; if(!file) return;
+    if(file.size>3*1024*1024){alert("Images must be under 3MB.");e.target.value="";return;}
+    const reader=new FileReader();
+    reader.onload=()=>{const r=reader.result as string;setImgData(r);setImgPrev(r);};
+    reader.readAsDataURL(file); e.target.value="";
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 4 * 1024 * 1024) { alert("Files must be under 4MB."); e.target.value=""; return; }
-    const reader = new FileReader();
-    reader.onload = () => setFileInfo({ name: file.name, data: reader.result as string, type: file.type });
-    reader.readAsDataURL(file);
-    e.target.value = "";
+    const file=e.target.files?.[0]; if(!file) return;
+    if(file.size>5*1024*1024){alert("Files must be under 5MB.");e.target.value="";return;}
+    const reader=new FileReader();
+    reader.onload=()=>setFileInfo({name:file.name,data:reader.result as string,type:file.type});
+    reader.readAsDataURL(file); e.target.value="";
   };
 
-  const clearAttachments = () => { setImgData(null); setImgPrev(null); setFileInfo(null); };
+  const clearAttachments=()=>{setImgData(null);setImgPrev(null);setFileInfo(null);};
 
   const handleSend = async () => {
-    if ((!text.trim() && !imageData && !fileInfo) || sending) return;
+    if (myStatus==="banned") { alert("You have been banned from chat."); return; }
+    if (myStatus==="muted") { alert("You are muted and cannot post."); return; }
+    if ((!text.trim()&&!imageData&&!fileInfo)||sending) return;
     setSending(true);
+    clearTimeout(typingTimer.current);
+    if (user?.email) fbSetTyping(user.email,user.name,false);
     const msg: Omit<ChatMessage,"id"> = {
-      userEmail: user.email || "",
-      userName: user.name || user.email?.split("@")[0] || "Member",
-      isAdmin: isAdmin(user),
-      text: text.trim(),
-      timestamp: Date.now(),
-      ...(imageData ? { imageData } : {}),
-      ...(fileInfo ? { fileName: fileInfo.name, fileData: fileInfo.data, fileType: fileInfo.type } : {}),
-      ...(replyTo ? { replyTo: { id: replyTo.id||"", userName: replyTo.userName, text: replyTo.text, imageData: replyTo.imageData } } : {}),
+      userEmail:user.email||"",
+      userName:user.name||user.email?.split("@")[0]||"Member",
+      isAdmin:isAdmin(user),
+      text:text.trim(),
+      timestamp:Date.now(),
+      channel,
+      ...(imageData?{imageData}:{}),
+      ...(fileInfo?{fileName:fileInfo.name,fileData:fileInfo.data,fileType:fileInfo.type}:{}),
+      ...(replyTo?{replyTo:{id:replyTo.id||"",userName:replyTo.userName,text:replyTo.text,imageData:replyTo.imageData}}:{}),
     };
-    await fbPostMessage(msg);
+    await fbPost(msg,channel);
+    await fbRegisterMember(user.email, user.name||user.email?.split("@")[0]||"Member");
     setText(""); clearAttachments(); setReplyTo(null); setSending(false);
     await loadMessages(true);
-    setTimeout(() => { inputRef.current?.focus(); }, 50);
+    setTimeout(()=>inputRef.current?.focus(),50);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm("Delete this message?")) return;
+  const handleDelete = async (id:string) => {
+    if(!window.confirm("Delete this message?")) return;
     setDeletingId(id);
-    await fbDeleteMessage(id);
+    await fbDeleteMessage(id,channel);
     await loadMessages(false);
     setDeletingId(null);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
+  const handlePin = async (msg:ChatMessage) => {
+    if(!isAdmin(user)) return;
+    try {
+      const all=await fbGetMessages(channel);
+      for(const m of all.filter(m=>m.pinned&&m.id)) {
+        await fetch(`${FB_CONFIG.databaseURL}/chat/channels/${channel}/messages/${m.id}.json`,{
+          method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({pinned:false})
+        });
+      }
+      const isPinned=pinnedMsg?.id===msg.id;
+      if(!isPinned&&msg.id) {
+        await fetch(`${FB_CONFIG.databaseURL}/chat/channels/${channel}/messages/${msg.id}.json`,{
+          method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({pinned:true})
+        });
+        setPinnedMsg(msg);
+      } else { setPinnedMsg(null); }
+      loadMessages(false);
+    } catch {}
   };
 
-  const formatTime = (ts: number) => new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  const formatDate = (ts: number) => {
-    const d = new Date(ts), t = new Date();
-    if (d.toDateString() === t.toDateString()) return "Today";
-    const y = new Date(t); y.setDate(t.getDate()-1);
-    if (d.toDateString() === y.toDateString()) return "Yesterday";
-    return d.toLocaleDateString([], { month: "short", day: "numeric" });
+  const handleCopyMsg=(msg:ChatMessage)=>{
+    navigator.clipboard.writeText(msg.text||"").catch(()=>{});
+    setCopiedId(msg.id||null);
+    setTimeout(()=>setCopiedId(null),1500);
   };
 
-  const grouped: { date: string; msgs: ChatMessage[] }[] = [];
-  messages.forEach(m => {
-    const label = formatDate(m.timestamp);
-    if (!grouped.length || grouped[grouped.length-1].date !== label)
-      grouped.push({ date: label, msgs: [m] });
+  const handleKeyDown=(e:React.KeyboardEvent<HTMLTextAreaElement>)=>{
+    if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();handleSend();}
+    if(e.key==="Escape"){setReplyTo(null);setShowEmojiFor(null);}
+  };
+
+  const formatTime=(ts:number)=>new Date(ts).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+  const formatDate=(ts:number)=>{
+    const d=new Date(ts),t=new Date();
+    if(d.toDateString()===t.toDateString()) return "Today";
+    const y=new Date(t);y.setDate(t.getDate()-1);
+    if(d.toDateString()===y.toDateString()) return "Yesterday";
+    return d.toLocaleDateString([],{month:"short",day:"numeric"});
+  };
+
+  const avatarColor=(email:string)=>{
+    const cols=["#3be8b0","#ff6b6b","#4f8ef7","#ffd166","#a855f7","#f59e0b","#ec4899","#14b8a6"];
+    let h=0;for(const c of email)h=(h*31+c.charCodeAt(0))%cols.length;
+    return cols[Math.abs(h)];
+  };
+  const initials=(name:string)=>name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
+
+  const grouped: {date:string;msgs:ChatMessage[]}[] = [];
+  const filtered=searchQuery?messages.filter(m=>m.text?.toLowerCase().includes(searchQuery.toLowerCase())||m.userName?.toLowerCase().includes(searchQuery.toLowerCase())):messages;
+  filtered.forEach(m=>{
+    const label=formatDate(m.timestamp);
+    if(!grouped.length||grouped[grouped.length-1].date!==label) grouped.push({date:label,msgs:[m]});
     else grouped[grouped.length-1].msgs.push(m);
   });
 
-  const isMe = (msg: ChatMessage) => msg.userEmail === user?.email;
-  const initials = (name: string) => name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
-  const avatarColor = (email: string) => {
-    const cols = ["#3be8b0","#ff6b6b","#4f8ef7","#ffd166","#a855f7","#f59e0b"];
-    let h=0; for(const c of email) h=(h*31+c.charCodeAt(0))%cols.length;
-    return cols[Math.abs(h)];
-  };
+  const isMe=(msg:ChatMessage)=>msg.userEmail===user?.email;
+  const QUICK_EMOJIS=["👍","🔥","💉","🧬","⚗️","💪","🙌","❤️","😂","🤯","👀","✅"];
 
   if (!user) return (
     <div style={{minHeight:"100vh",background:bg,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16,padding:40}}>
-      <div style={{fontSize:"2.5rem"}}>💬</div>
-      <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1.4rem",color:"#fff"}}>Members Only</div>
-      <div style={{color:muted,fontSize:"0.9rem",textAlign:"center",maxWidth:280}}>Sign in to access the Alphaomegatides researcher community chat.</div>
-      <button onClick={()=>go("login")} style={{background:accentG,color:"#0e0e0e",border:"none",borderRadius:100,padding:"12px 28px",fontFamily:"inherit",fontWeight:700,fontSize:"0.9rem",cursor:"pointer",marginTop:8}}>Sign In</button>
-      <button onClick={()=>go("register")} style={{background:"transparent",color:muted,border:"1px solid rgba(255,255,255,0.12)",borderRadius:100,padding:"10px 24px",fontFamily:"inherit",fontWeight:600,fontSize:"0.85rem",cursor:"pointer"}}>Create Account</button>
+      <div style={{width:80,height:80,borderRadius:"50%",background:"linear-gradient(135deg,#3be8b0,#4f8ef7)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"2rem",boxShadow:"0 0 40px rgba(59,232,176,0.3)"}}>💬</div>
+      <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1.6rem",color:"#fff",marginTop:8}}>Members Only</div>
+      <div style={{color:muted,fontSize:"0.9rem",textAlign:"center",maxWidth:280,lineHeight:1.6}}>Sign in to access the community chat.</div>
+      <button onClick={()=>go("login")} style={{background:accentG,color:"#0e0e0e",border:"none",borderRadius:100,padding:"13px 32px",fontFamily:"inherit",fontWeight:700,fontSize:"0.95rem",cursor:"pointer",marginTop:8,boxShadow:"0 4px 20px rgba(59,232,176,0.4)"}}>Sign In</button>
+      <button onClick={()=>go("register")} style={{background:"transparent",color:muted,border:"1px solid rgba(255,255,255,0.12)",borderRadius:100,padding:"11px 28px",fontFamily:"inherit",fontWeight:600,fontSize:"0.88rem",cursor:"pointer"}}>Create Account</button>
     </div>
   );
 
   return (
     <div style={{background:bg,minHeight:"100vh",display:"flex",flexDirection:"column",paddingTop:60}}>
-      {/* HEADER */}
-      <div style={{background:"#111",borderBottom:"1px solid rgba(255,255,255,0.08)",padding:"14px 20px",display:"flex",alignItems:"center",gap:12,position:"sticky",top:60,zIndex:10}}>
-        <div style={{width:38,height:38,borderRadius:"50%",background:"linear-gradient(135deg,#3be8b0,#4f8ef7)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.1rem",flexShrink:0}}>🔬</div>
-        <div>
-          <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1rem",color:"#fff"}}>Researcher Community</div>
-          <div style={{fontSize:"0.72rem",color:accentG,display:"flex",alignItems:"center",gap:5}}>
-            <span style={{width:6,height:6,borderRadius:"50%",background:accentG,display:"inline-block",animation:"chatpulse 2s infinite"}}/>
-            Live · {messages.length} message{messages.length!==1?"s":""}
-          </div>
+      <style>{`
+        @keyframes chatpulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.5;transform:scale(.9);}}
+        @keyframes msgIn{from{opacity:0;transform:translateY(6px) scale(0.98);}to{opacity:1;transform:translateY(0) scale(1);}}
+        @keyframes msgflash{0%{background:rgba(59,232,176,0.18);}100%{background:transparent;}}
+        @keyframes typingDot{0%,80%,100%{transform:translateY(0);opacity:0.4;}40%{transform:translateY(-4px);opacity:1;}}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+        @keyframes slideIn{from{opacity:0;transform:translateX(-8px);}to{opacity:1;transform:translateX(0);}}
+        .msg-flash{animation:msgflash 1.2s ease-out;}
+        .chat-msg{animation:msgIn 0.2s ease-out;}
+        .bubble-hover{transition:filter .15s;}.bubble-hover:hover{filter:brightness(1.07);}
+        .channel-btn:hover{background:rgba(255,255,255,0.08)!important;}
+        .action-btn:hover{opacity:1!important;background:rgba(255,255,255,0.1)!important;}
+        .emoji-btn:hover{background:rgba(255,255,255,0.12)!important;transform:scale(1.2);}
+        .online-dot{animation:chatpulse 2s infinite;}
+        ::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.12);border-radius:2px;}
+      `}</style>
+
+      {/* ── TOP HEADER ── */}
+      <div style={{background:"rgba(10,10,10,0.95)",backdropFilter:"blur(20px)",borderBottom:"1px solid "+border,padding:"0 16px",display:"flex",alignItems:"center",gap:10,position:"sticky",top:60,zIndex:20,height:56}}>
+        <button onClick={()=>setShowChannels(!showChannels)} className="channel-btn"
+          style={{display:"flex",alignItems:"center",gap:8,background:showChannels?"rgba(59,232,176,0.1)":glass,border:"1px solid "+(showChannels?"rgba(59,232,176,0.3)":border),borderRadius:10,padding:"7px 12px",cursor:"pointer",transition:"all .15s"}}>
+          <span style={{fontSize:"1rem"}}>{ch.icon}</span>
+          <span style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"0.88rem",color:"#fff"}}>{ch.label}</span>
+          <span style={{fontSize:"0.6rem",color:muted,marginLeft:2}}>{showChannels?"▲":"▼"}</span>
+        </button>
+        <div style={{display:"flex",alignItems:"center",gap:5,fontSize:"0.72rem"}}>
+          <span className="online-dot" style={{width:6,height:6,borderRadius:"50%",background:accentG,display:"inline-block"}}/>
+          <span style={{color:muted}}>{onlineUsers.length} online</span>
         </div>
-        <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:10}}>
-          <button onClick={()=>loadMessages(true)} style={{background:"rgba(59,232,176,0.1)",border:"1px solid rgba(59,232,176,0.2)",color:accentG,borderRadius:8,padding:"5px 12px",cursor:"pointer",fontSize:"0.72rem",fontWeight:700}}>↻ Refresh</button>
-          <div style={{fontSize:"0.72rem",color:muted,display:"flex",alignItems:"center",gap:6}}>
-            Members only
-            <LiveViewerBadge productId="community-chat"/>
-          </div>
+        <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:6}}>
+          <button onClick={()=>{setShowSearch(!showSearch);if(!showSearch)setTimeout(()=>document.getElementById("chat-search")?.focus(),100);}}
+            style={{background:showSearch?"rgba(79,142,247,0.15)":glass,border:"1px solid "+(showSearch?"rgba(79,142,247,0.3)":border),borderRadius:9,width:34,height:34,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"0.85rem",transition:"all .15s"}}>🔍</button>
+          <button onClick={()=>setShowOnline(!showOnline)}
+            style={{background:glass,border:"1px solid "+border,borderRadius:9,width:34,height:34,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"0.85rem"}}>👥</button>
+          {isAdmin(user)&&(
+            <button onClick={()=>setShowMemberPanel(true)}
+              title="Member Management"
+              style={{background:"rgba(255,107,107,0.1)",border:"1px solid rgba(255,107,107,0.25)",borderRadius:9,width:34,height:34,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"0.85rem"}}>⚙️</button>
+          )}
+          {pinnedMsg&&(
+            <button onClick={()=>setShowPinned(!showPinned)}
+              style={{background:"rgba(255,209,102,0.12)",border:"1px solid rgba(255,209,102,0.25)",borderRadius:9,width:34,height:34,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"0.85rem"}}>📌</button>
+          )}
         </div>
       </div>
 
-      {/* DISCLAIMER */}
-      <div style={{background:"rgba(255,107,107,0.07)",borderBottom:"1px solid rgba(255,107,107,0.15)",padding:"8px 20px",fontSize:"0.7rem",color:"rgba(255,107,107,0.8)",textAlign:"center"}}>
+      {/* ── CHANNEL DROPDOWN ── */}
+      {showChannels&&(
+        <div style={{background:"rgba(18,18,18,0.98)",backdropFilter:"blur(20px)",borderBottom:"1px solid "+border,padding:"10px 16px",display:"flex",gap:8,flexWrap:"wrap" as const,position:"sticky",top:116,zIndex:19,animation:"fadeUp .15s ease-out"}}>
+          {CHAT_CHANNELS.map(c=>(
+            <button key={c.id} onClick={()=>{setChannel(c.id);setShowChannels(false);}} className="channel-btn"
+              style={{display:"flex",alignItems:"center",gap:7,background:channel===c.id?"rgba(59,232,176,0.12)":glass,border:"1px solid "+(channel===c.id?"rgba(59,232,176,0.3)":border),borderRadius:10,padding:"8px 14px",cursor:"pointer",transition:"all .15s"}}>
+              <span style={{fontSize:"1rem"}}>{c.icon}</span>
+              <div>
+                <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"0.82rem",color:channel===c.id?accentG:"#fff"}}>{c.label}</div>
+                <div style={{fontSize:"0.65rem",color:muted}}>{c.desc}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* ── SEARCH BAR ── */}
+      {showSearch&&(
+        <div style={{background:"rgba(14,14,14,0.95)",backdropFilter:"blur(12px)",borderBottom:"1px solid "+border,padding:"10px 16px",position:"sticky",top:116,zIndex:18}}>
+          <div style={{maxWidth:700,margin:"0 auto",position:"relative" as const}}>
+            <span style={{position:"absolute" as const,left:12,top:"50%",transform:"translateY(-50%)",color:muted,fontSize:"0.85rem"}}>🔍</span>
+            <input id="chat-search" value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} placeholder={"Search "+ch.label+"…"}
+              style={{width:"100%",background:glass,border:"1px solid "+border,borderRadius:10,padding:"9px 14px 9px 34px",color:"#fff",fontFamily:"'DM Sans',sans-serif",fontSize:"0.88rem",outline:"none",boxSizing:"border-box" as const}}/>
+            {searchQuery&&<button onClick={()=>setSearchQuery("")} style={{position:"absolute" as const,right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:muted,cursor:"pointer",fontSize:"1rem"}}>✕</button>}
+          </div>
+          {searchQuery&&<div style={{maxWidth:700,margin:"6px auto 0",fontSize:"0.72rem",color:muted}}>{filtered.length} result{filtered.length!==1?"s":""}</div>}
+        </div>
+      )}
+
+      {/* ── PINNED ── */}
+      {pinnedMsg&&showPinned&&(
+        <div style={{background:"rgba(255,209,102,0.07)",borderBottom:"1px solid rgba(255,209,102,0.18)",padding:"10px 16px",display:"flex",gap:10,alignItems:"flex-start"}}>
+          <span style={{fontSize:"0.85rem",marginTop:1}}>📌</span>
+          <div style={{flex:1}}>
+            <div style={{fontSize:"0.65rem",color:"rgba(255,209,102,0.7)",fontWeight:700,marginBottom:3}}>PINNED</div>
+            <div style={{fontSize:"0.82rem",color:"rgba(255,255,255,0.8)"}}>{pinnedMsg.userName}: {pinnedMsg.text}</div>
+          </div>
+          <button onClick={()=>setShowPinned(false)} style={{background:"none",border:"none",color:muted,cursor:"pointer",fontSize:"0.85rem"}}>✕</button>
+        </div>
+      )}
+
+      {/* ── ONLINE LIST ── */}
+      {showOnline&&(
+        <div style={{background:"rgba(18,18,18,0.97)",backdropFilter:"blur(16px)",borderBottom:"1px solid "+border,padding:"12px 16px",animation:"slideIn .15s ease-out"}}>
+          <div style={{maxWidth:700,margin:"0 auto"}}>
+            <div style={{fontSize:"0.7rem",fontWeight:700,color:muted,letterSpacing:"0.08em",marginBottom:10}}>ONLINE NOW</div>
+            <div style={{display:"flex",flexWrap:"wrap" as const,gap:8}}>
+              {onlineUsers.length===0
+                ?<span style={{fontSize:"0.8rem",color:muted}}>No one else online</span>
+                :onlineUsers.map((u,i)=>(
+                  <div key={i} style={{display:"flex",alignItems:"center",gap:6,background:glass,border:"1px solid "+border,borderRadius:20,padding:"4px 10px"}}>
+                    <span className="online-dot" style={{width:5,height:5,borderRadius:"50%",background:accentG,display:"inline-block"}}/>
+                    <span style={{fontSize:"0.78rem",color:"rgba(255,255,255,0.8)"}}>{u.name}</span>
+                  </div>
+                ))
+              }
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MUTED/BANNED NOTICE ── */}
+      {myStatus==="muted"&&(
+        <div style={{background:"rgba(255,209,102,0.08)",borderBottom:"1px solid rgba(255,209,102,0.2)",padding:"8px 16px",textAlign:"center",fontSize:"0.78rem",color:"#ffd166"}}>
+          🔇 You are muted — you can read but cannot post. Contact an admin to appeal.
+        </div>
+      )}
+      {myStatus==="banned"&&(
+        <div style={{background:"rgba(255,107,107,0.08)",borderBottom:"1px solid rgba(255,107,107,0.2)",padding:"8px 16px",textAlign:"center",fontSize:"0.78rem",color:"#ff6b6b"}}>
+          🚫 You are banned from chat. Contact support at alphaomegatides@yahoo.com to appeal.
+        </div>
+      )}
+
+      {/* ── COMPLIANCE ── */}
+      <div style={{background:"rgba(255,107,107,0.05)",borderBottom:"1px solid rgba(255,107,107,0.1)",padding:"5px 20px",fontSize:"0.67rem",color:"rgba(255,107,107,0.65)",textAlign:"center"}}>
         ⚠️ Research discussion only · No medical advice · All products for in-vitro research use only
       </div>
 
-      {/* MESSAGES */}
-      <div style={{flex:1,overflowY:"auto",padding:"16px 12px",display:"flex",flexDirection:"column",gap:2,maxWidth:760,width:"100%",margin:"0 auto",boxSizing:"border-box" as const}}>
-        {loading && (
-          <div style={{textAlign:"center",color:muted,padding:"60px 20px"}}>
-            <div style={{fontSize:"1.5rem",marginBottom:8,animation:"chatpulse 1.5s infinite"}}>💬</div>
-            <div style={{fontSize:"0.85rem"}}>Loading messages…</div>
+      {/* ── MESSAGES ── */}
+      <div style={{flex:1,overflowY:"auto",padding:"12px 12px 8px",display:"flex",flexDirection:"column",gap:2,maxWidth:760,width:"100%",margin:"0 auto",boxSizing:"border-box" as const}}>
+        {loading&&(
+          <div style={{textAlign:"center",color:muted,padding:"60px 20px",display:"flex",flexDirection:"column",alignItems:"center",gap:12}}>
+            <div style={{display:"flex",gap:6}}>{[0,1,2].map(i=><span key={i} style={{width:8,height:8,borderRadius:"50%",background:accentG,display:"inline-block",animation:`typingDot 1.2s ${i*0.2}s infinite`}}/>)}</div>
+            <div style={{fontSize:"0.82rem"}}>Loading {ch.label}…</div>
           </div>
         )}
-        {!loading && messages.length === 0 && (
-          <div style={{textAlign:"center",color:muted,padding:"60px 20px"}}>
-            <div style={{fontSize:"2.5rem",marginBottom:12}}>👋</div>
-            <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"1.1rem",color:"rgba(255,255,255,0.6)",marginBottom:6}}>Welcome to the community</div>
-            <div style={{fontSize:"0.85rem"}}>Be the first to post. Research discussions, questions, and updates welcome.</div>
+        {!loading&&messages.length===0&&(
+          <div style={{textAlign:"center",color:muted,padding:"60px 20px",animation:"fadeUp .3s ease-out"}}>
+            <div style={{fontSize:"3rem",marginBottom:12}}>{ch.icon}</div>
+            <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"1.1rem",color:"rgba(255,255,255,0.6)",marginBottom:6}}>{ch.label}</div>
+            <div style={{fontSize:"0.85rem"}}>{ch.desc} — be the first to post here.</div>
           </div>
         )}
 
-        {grouped.map((group, gi) => (
+        {grouped.map((group,gi)=>(
           <div key={gi}>
-            <div style={{display:"flex",alignItems:"center",gap:10,margin:"16px 0 10px",color:muted,fontSize:"0.7rem"}}>
-              <div style={{flex:1,height:1,background:"rgba(255,255,255,0.07)"}}/>
-              <div style={{background:"#1c1c1c",border:"1px solid rgba(255,255,255,0.1)",borderRadius:100,padding:"2px 12px"}}>{group.date}</div>
-              <div style={{flex:1,height:1,background:"rgba(255,255,255,0.07)"}}/>
+            <div style={{display:"flex",alignItems:"center",gap:10,margin:"16px 0 10px",color:muted,fontSize:"0.68rem"}}>
+              <div style={{flex:1,height:1,background:"rgba(255,255,255,0.06)"}}/>
+              <div style={{background:"#181818",border:"1px solid rgba(255,255,255,0.09)",borderRadius:100,padding:"2px 12px",fontWeight:600}}>{group.date}</div>
+              <div style={{flex:1,height:1,background:"rgba(255,255,255,0.06)"}}/>
             </div>
-
-            {group.msgs.map((msg, mi) => {
-              const mine = isMe(msg);
-              const prev = mi > 0 ? group.msgs[mi-1] : null;
-              const sameAuthor = prev?.userEmail === msg.userEmail;
-              const canDelete = isAdmin(user) || mine;
-
+            {group.msgs.map((msg,mi)=>{
+              const mine=isMe(msg);
+              const prev=mi>0?group.msgs[mi-1]:null;
+              const sameAuthor=prev?.userEmail===msg.userEmail;
+              const canDelete=isAdmin(user)||mine;
               return (
-                <div key={msg.id||mi} id={"msg-"+(msg.id||mi)} style={{display:"flex",flexDirection:mine?"row-reverse":"row",alignItems:"flex-end",gap:8,marginBottom:sameAuthor?2:8,marginTop:!mine&&!sameAuthor?6:0,transition:"background .4s",borderRadius:12}}>
-                  {!mine && (
-                    <div style={{width:32,height:32,flexShrink:0,borderRadius:"50%",
-                      background:msg.isAdmin?"#ff6b6b":avatarColor(msg.userEmail),
-                      display:"flex",alignItems:"center",justifyContent:"center",
-                      fontSize:"0.65rem",fontWeight:700,color:"#0e0e0e",
-                      opacity:!sameAuthor?1:0}}>
+                <div key={msg.id||mi} id={"msg-"+(msg.id||mi)} className="chat-msg"
+                  style={{display:"flex",flexDirection:mine?"row-reverse":"row",alignItems:"flex-end",gap:8,marginBottom:sameAuthor?2:8,position:"relative" as const,borderRadius:14,padding:"2px 0",transition:"background .4s"}}>
+                  {!mine&&(
+                    <div style={{width:30,height:30,flexShrink:0,borderRadius:"50%",background:msg.isAdmin?accentR:avatarColor(msg.userEmail),display:"flex",alignItems:"center",justifyContent:"center",fontSize:"0.6rem",fontWeight:800,color:"#0e0e0e",opacity:!sameAuthor?1:0,boxShadow:msg.isAdmin?"0 0 10px rgba(255,107,107,0.4)":"none"}}>
                       {msg.isAdmin?"👑":initials(msg.userName)}
                     </div>
                   )}
-
-                  <div style={{maxWidth:"72%",minWidth:60,position:"relative" as const}} className="chat-bubble-wrap">
-                    {!mine && !sameAuthor && (
-                      <div style={{fontSize:"0.7rem",fontWeight:700,marginBottom:3,paddingLeft:4,
-                        color:msg.isAdmin?"#ff6b6b":avatarColor(msg.userEmail),display:"flex",alignItems:"center",gap:6}}>
+                  <div style={{maxWidth:"73%",minWidth:60,position:"relative" as const}}>
+                    {!mine&&!sameAuthor&&(
+                      <div style={{fontSize:"0.68rem",fontWeight:700,marginBottom:3,paddingLeft:4,display:"flex",alignItems:"center",gap:6,color:msg.isAdmin?accentR:avatarColor(msg.userEmail)}}>
                         {msg.userName}
-                        {msg.isAdmin && <span style={{background:"#ff6b6b",color:"#fff",fontSize:"0.6rem",fontWeight:800,padding:"1px 7px",borderRadius:100}}>ADMIN</span>}
+                        {msg.isAdmin&&<span style={{background:accentR,color:"#fff",fontSize:"0.58rem",fontWeight:800,padding:"1px 7px",borderRadius:100}}>ADMIN</span>}
                       </div>
                     )}
-
-                    <div style={{
-                      background:mine?myBubble:theirBubble,
-                      border:mine?"1px solid rgba(59,232,176,0.2)":"1px solid rgba(255,255,255,0.07)",
+                    <div className="bubble-hover" style={{
+                      background:mine?"linear-gradient(135deg,#1a3d2a 0%,#0d2a1e 100%)":card2,
+                      border:mine?"1px solid rgba(59,232,176,0.18)":"1px solid rgba(255,255,255,0.06)",
                       borderRadius:mine?(sameAuthor?"16px 4px 4px 16px":"16px 4px 16px 16px"):(sameAuthor?"4px 16px 16px 4px":"4px 16px 16px 16px"),
-                      padding:"10px 13px",
+                      padding:"9px 12px",backdropFilter:"blur(8px)",
+                      boxShadow:mine?"0 2px 16px rgba(59,232,176,0.08)":"0 2px 8px rgba(0,0,0,0.3)",
                     }}>
-                      {/* REPLY PREVIEW */}
-                      {msg.replyTo && (
-                        <div style={{background:"rgba(255,255,255,0.06)",borderLeft:"3px solid #3be8b0",borderRadius:"0 8px 8px 0",padding:"5px 10px",marginBottom:8,cursor:"pointer"}}
+                      {msg.replyTo&&(
+                        <div style={{background:"rgba(255,255,255,0.05)",borderLeft:"3px solid "+accentG,borderRadius:"0 8px 8px 0",padding:"5px 10px",marginBottom:8,cursor:"pointer"}}
                           onClick={()=>{const el=document.getElementById("msg-"+msg.replyTo!.id);el?.scrollIntoView({behavior:"smooth",block:"center"});el?.classList.add("msg-flash");}}>
-                          <div style={{fontSize:"0.65rem",fontWeight:700,color:"#3be8b0",marginBottom:2}}>{msg.replyTo.userName}</div>
-                          {msg.replyTo.imageData && <div style={{fontSize:"0.65rem",color:"rgba(255,255,255,0.4)"}}>🖼️ Image</div>}
-                          {msg.replyTo.text && <div style={{fontSize:"0.72rem",color:"rgba(255,255,255,0.55)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const,maxWidth:200}}>{msg.replyTo.text}</div>}
+                          <div style={{fontSize:"0.63rem",fontWeight:700,color:accentG,marginBottom:2}}>{msg.replyTo.userName}</div>
+                          {msg.replyTo.imageData&&<div style={{fontSize:"0.63rem",color:muted}}>🖼 Image</div>}
+                          {msg.replyTo.text&&<div style={{fontSize:"0.7rem",color:"rgba(255,255,255,0.5)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const,maxWidth:200}}>{msg.replyTo.text}</div>}
                         </div>
                       )}
-                      {/* INLINE IMAGE — tap for fullscreen lightbox */}
-                      {msg.imageData && (
+                      {msg.imageData&&(
                         <div style={{marginBottom:msg.text?8:0,position:"relative" as const}}>
-                          <img src={msg.imageData} alt="shared"
-                            style={{maxWidth:"100%",maxHeight:320,borderRadius:12,display:"block",cursor:"zoom-in",objectFit:"cover" as const,border:"1px solid rgba(255,255,255,0.1)"}}
-                            onClick={()=>setLightbox(msg.imageData!)}/>
-                          <div style={{position:"absolute",bottom:6,right:6,background:"rgba(0,0,0,0.5)",borderRadius:6,padding:"2px 6px",fontSize:"0.6rem",color:"rgba(255,255,255,0.7)",backdropFilter:"blur(4px)"}}>tap to expand</div>
+                          <img src={msg.imageData} alt="shared" style={{maxWidth:"100%",maxHeight:280,borderRadius:10,display:"block",cursor:"zoom-in",objectFit:"cover" as const,border:"1px solid rgba(255,255,255,0.08)"}} onClick={()=>setLightbox(msg.imageData!)}/>
+                          <div style={{position:"absolute" as const,bottom:5,right:5,background:"rgba(0,0,0,0.55)",borderRadius:5,padding:"1px 6px",fontSize:"0.58rem",color:"rgba(255,255,255,0.7)",backdropFilter:"blur(4px)"}}>tap to expand</div>
                         </div>
                       )}
-                      {msg.fileName && !msg.fileType?.startsWith("image") && (
-                        <a href={msg.fileData} download={msg.fileName}
-                          style={{display:"flex",alignItems:"center",gap:8,background:"rgba(255,255,255,0.06)",
-                            border:"1px solid rgba(255,255,255,0.1)",borderRadius:10,padding:"8px 12px",
-                            marginBottom:msg.text?8:0,textDecoration:"none",cursor:"pointer"}}>
-                          <span style={{fontSize:"1.4rem"}}>
-                            {msg.fileType?.includes("pdf")?"📄":"📎"}
-                          </span>
+                      {msg.fileName&&!msg.fileType?.startsWith("image")&&(
+                        <a href={msg.fileData} download={msg.fileName} style={{display:"flex",alignItems:"center",gap:8,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:10,padding:"8px 12px",marginBottom:msg.text?8:0,textDecoration:"none"}}>
+                          <span style={{fontSize:"1.3rem"}}>{msg.fileType?.includes("pdf")?"📄":"📎"}</span>
                           <div>
-                            <div style={{fontSize:"0.78rem",fontWeight:600,color:"#fff",maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{msg.fileName}</div>
-                            <div style={{fontSize:"0.65rem",color:muted}}>Tap to download</div>
+                            <div style={{fontSize:"0.76rem",fontWeight:600,color:"#fff",maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{msg.fileName}</div>
+                            <div style={{fontSize:"0.62rem",color:muted}}>Tap to download</div>
                           </div>
                         </a>
                       )}
-                      {msg.text && (
-                        <div style={{fontSize:"0.88rem",color:"#f0f0f0",lineHeight:1.5,wordBreak:"break-word" as const,whiteSpace:"pre-wrap" as const}}>
-                          {msg.text}
-                        </div>
-                      )}
-                      {/* REACTIONS */}
-                      {msg.reactions && Object.keys(msg.reactions).length > 0 && (
-                        <div style={{display:"flex",flexWrap:"wrap" as const,gap:4,marginTop:6}}>
+                      {msg.text&&<div style={{fontSize:"0.88rem",color:"#f0f0f0",lineHeight:1.55,wordBreak:"break-word" as const,whiteSpace:"pre-wrap" as const}}>{msg.text}</div>}
+                      {msg.reactions&&Object.keys(msg.reactions).length>0&&(
+                        <div style={{display:"flex",flexWrap:"wrap" as const,gap:4,marginTop:7}}>
                           {Object.entries(msg.reactions).map(([emoji,users])=>(
-                            <button key={emoji} onClick={()=>msg.id&&fbToggleReaction(msg.id,emoji,user.email).then(()=>loadMessages(false))}
-                              style={{background:(users as string[]).includes(user.email)?"rgba(59,232,176,0.2)":"rgba(255,255,255,0.07)",
-                                border:(users as string[]).includes(user.email)?"1px solid rgba(59,232,176,0.4)":"1px solid rgba(255,255,255,0.1)",
-                                borderRadius:100,padding:"2px 8px",cursor:"pointer",fontSize:"0.78rem",display:"flex",alignItems:"center",gap:3,color:"#fff"}}>
-                              {emoji} <span style={{fontSize:"0.65rem",color:"rgba(255,255,255,0.55)"}}>{(users as string[]).length}</span>
+                            <button key={emoji} onClick={()=>msg.id&&fbToggleReaction(msg.id,emoji,user.email,channel).then(()=>loadMessages(false))}
+                              style={{background:(users as string[]).includes(user.email)?"rgba(59,232,176,0.15)":"rgba(255,255,255,0.06)",border:(users as string[]).includes(user.email)?"1px solid rgba(59,232,176,0.35)":"1px solid rgba(255,255,255,0.08)",borderRadius:100,padding:"2px 8px",cursor:"pointer",fontSize:"0.76rem",display:"flex",alignItems:"center",gap:3,color:"#fff",transition:"all .12s"}}>
+                              {emoji} <span style={{fontSize:"0.62rem",color:muted}}>{(users as string[]).length}</span>
                             </button>
                           ))}
                         </div>
                       )}
-                      <div style={{display:"flex",alignItems:"center",justifyContent:mine?"flex-end":"flex-start",gap:6,marginTop:4}}>
-                        <div style={{fontSize:"0.62rem",color:muted}}>{formatTime(msg.timestamp)}</div>
-                        {/* EMOJI REACTION PICKER TRIGGER */}
-                        <button onClick={()=>setShowEmojiFor(showEmojiFor===msg.id?null:msg.id||null)}
-                          style={{background:"none",border:"none",color:"rgba(255,255,255,0.25)",cursor:"pointer",fontSize:"0.7rem",padding:"0 2px",lineHeight:1,transition:"color .15s"}}
-                          title="React">😊</button>
-                        {/* REPLY BUTTON */}
-                        <button onClick={()=>{setReplyTo(msg);setTimeout(()=>inputRef.current?.focus(),50);}}
-                          style={{background:"none",border:"none",color:"rgba(255,255,255,0.25)",cursor:"pointer",fontSize:"0.65rem",padding:"0 2px",lineHeight:1}}
-                          title="Reply">↩</button>
-                        <button onClick={()=>{navigator.clipboard.writeText(`[${msg.userName}]: ${msg.text}`).catch(()=>{});}}
-                          style={{background:"none",border:"none",color:"rgba(255,255,255,0.18)",cursor:"pointer",fontSize:"0.6rem",padding:"0 2px",lineHeight:1}}
-                          title="Copy message">⎘</button>
-                        {canDelete && msg.id && (
-                          <button onClick={()=>handleDelete(msg.id!)}
-                            disabled={deletingId===msg.id}
-                            style={{background:"none",border:"none",color:"rgba(255,107,107,0.3)",cursor:"pointer",fontSize:"0.6rem",padding:"0 2px",lineHeight:1}}>
+                      <div style={{display:"flex",alignItems:"center",justifyContent:mine?"flex-end":"flex-start",gap:5,marginTop:5}}>
+                        <div style={{fontSize:"0.6rem",color:"rgba(255,255,255,0.28)"}}>{formatTime(msg.timestamp)}</div>
+                        <button onClick={()=>setShowEmojiFor(showEmojiFor===msg.id?null:msg.id||null)} className="action-btn"
+                          style={{background:"none",border:"none",color:"rgba(255,255,255,0.22)",cursor:"pointer",fontSize:"0.7rem",padding:"1px 3px",opacity:0.5,transition:"all .12s",borderRadius:4}}>😊</button>
+                        <button onClick={()=>{setReplyTo(msg);setTimeout(()=>inputRef.current?.focus(),50);}} className="action-btn"
+                          style={{background:"none",border:"none",color:"rgba(255,255,255,0.22)",cursor:"pointer",fontSize:"0.65rem",padding:"1px 3px",opacity:0.5,transition:"all .12s",borderRadius:4}}>↩</button>
+                        <button onClick={()=>handleCopyMsg(msg)} className="action-btn"
+                          style={{background:"none",border:"none",color:copiedId===msg.id?accentG:"rgba(255,255,255,0.22)",cursor:"pointer",fontSize:"0.6rem",padding:"1px 3px",opacity:0.5,transition:"all .12s",borderRadius:4}}>
+                          {copiedId===msg.id?"✓":"⎘"}
+                        </button>
+                        {isAdmin(user)&&(
+                          <button onClick={()=>handlePin(msg)} className="action-btn"
+                            style={{background:"none",border:"none",color:pinnedMsg?.id===msg.id?"rgba(255,209,102,0.7)":"rgba(255,255,255,0.22)",cursor:"pointer",fontSize:"0.6rem",padding:"1px 3px",opacity:0.5,transition:"all .12s",borderRadius:4}}>📌</button>
+                        )}
+                        {canDelete&&msg.id&&(
+                          <button onClick={()=>handleDelete(msg.id!)} disabled={deletingId===msg.id} className="action-btn"
+                            style={{background:"none",border:"none",color:"rgba(255,107,107,0.35)",cursor:"pointer",fontSize:"0.6rem",padding:"1px 3px",opacity:0.5,transition:"all .12s",borderRadius:4}}>
                             {deletingId===msg.id?"…":"🗑"}
                           </button>
                         )}
                       </div>
-                      {/* EMOJI PICKER POPUP */}
-                      {showEmojiFor===msg.id && (
-                        <div style={{position:"absolute" as const,bottom:"100%",right:mine?"0":"auto",left:mine?"auto":"0",background:"#1c1c1c",border:"1px solid rgba(255,255,255,0.12)",borderRadius:12,padding:"6px 8px",display:"flex",gap:4,zIndex:50,boxShadow:"0 4px 20px rgba(0,0,0,0.5)"}}>
-                          {["👍","🔥","💉","🧬","⚗️","💪","🙌","❤️"].map(e=>(
-                            <button key={e} onClick={()=>{if(msg.id){fbToggleReaction(msg.id,e,user.email).then(()=>loadMessages(false));setShowEmojiFor(null);}}}
-                              style={{background:"none",border:"none",cursor:"pointer",fontSize:"1.1rem",padding:"2px 3px",borderRadius:6,transition:"background .1s"}}
-                              title={e}>{e}</button>
+                      {showEmojiFor===msg.id&&(
+                        <div style={{position:"absolute" as const,bottom:"100%",right:mine?"0":"auto",left:mine?"auto":"0",background:"#1c1c1c",border:"1px solid rgba(255,255,255,0.12)",borderRadius:14,padding:"8px 10px",display:"flex",gap:5,zIndex:50,boxShadow:"0 8px 32px rgba(0,0,0,0.6)",backdropFilter:"blur(12px)",flexWrap:"wrap" as const,maxWidth:220,animation:"fadeUp .12s ease-out"}}>
+                          {QUICK_EMOJIS.map(e=>(
+                            <button key={e} className="emoji-btn" onClick={()=>{if(msg.id){fbToggleReaction(msg.id,e,user.email,channel).then(()=>loadMessages(false));setShowEmojiFor(null);}}}
+                              style={{background:"none",border:"none",cursor:"pointer",fontSize:"1.2rem",padding:"3px 4px",borderRadius:8,transition:"all .12s"}}>{e}</button>
                           ))}
                         </div>
                       )}
@@ -6998,86 +7495,249 @@ function MemberChatPage({go, user}: {go: Function; user: any}) {
             })}
           </div>
         ))}
+
+        {typingUsers.length>0&&(
+          <div style={{display:"flex",alignItems:"center",gap:8,padding:"4px 0 2px 38px",animation:"msgIn .2s ease-out"}}>
+            <div style={{background:card2,border:"1px solid "+border,borderRadius:"4px 14px 14px 14px",padding:"8px 14px",display:"flex",alignItems:"center",gap:6}}>
+              <div style={{display:"flex",gap:4}}>{[0,1,2].map(i=><span key={i} style={{width:5,height:5,borderRadius:"50%",background:accentG,display:"inline-block",animation:`typingDot 1.2s ${i*0.15}s infinite`}}/>)}</div>
+              <span style={{fontSize:"0.72rem",color:muted}}>{typingUsers.join(", ")} {typingUsers.length===1?"is":"are"} typing</span>
+            </div>
+          </div>
+        )}
         <div ref={bottomRef}/>
       </div>
 
-      {/* LIGHTBOX */}
-      {lightboxSrc && (
-        <div onClick={()=>setLightbox(null)}
-          style={{position:"fixed" as const,inset:0,zIndex:9999,background:"rgba(0,0,0,0.92)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"zoom-out"}}>
-          <img src={lightboxSrc} alt="fullscreen"
-            style={{maxWidth:"95vw",maxHeight:"90vh",borderRadius:16,objectFit:"contain" as const,boxShadow:"0 0 60px rgba(0,0,0,0.8)"}}
-            onClick={e=>e.stopPropagation()}/>
-          <button onClick={()=>setLightbox(null)}
-            style={{position:"absolute" as const,top:20,right:20,background:"rgba(255,255,255,0.12)",border:"none",color:"#fff",width:40,height:40,borderRadius:"50%",cursor:"pointer",fontSize:"1.2rem",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+      {/* ── LIGHTBOX ── */}
+      {lightboxSrc&&(
+        <div onClick={()=>setLightbox(null)} style={{position:"fixed" as const,inset:0,zIndex:9999,background:"rgba(0,0,0,0.94)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"zoom-out",backdropFilter:"blur(6px)"}}>
+          <img src={lightboxSrc} alt="fullscreen" style={{maxWidth:"95vw",maxHeight:"92vh",borderRadius:16,objectFit:"contain" as const,boxShadow:"0 0 80px rgba(0,0,0,0.9)"}} onClick={e=>e.stopPropagation()}/>
+          <button onClick={()=>setLightbox(null)} style={{position:"absolute" as const,top:20,right:20,background:"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.15)",backdropFilter:"blur(8px)",color:"#fff",width:40,height:40,borderRadius:"50%",cursor:"pointer",fontSize:"1.1rem",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
         </div>
       )}
 
-      {/* REPLY BAR */}
-      {replyTo && (
-        <div style={{background:"#111",borderTop:"1px solid rgba(59,232,176,0.2)",padding:"8px 16px",display:"flex",alignItems:"center",gap:10,maxWidth:760,width:"100%",margin:"0 auto",boxSizing:"border-box" as const}}>
-          <div style={{width:3,height:"100%",background:"#3be8b0",borderRadius:2,flexShrink:0,alignSelf:"stretch"}}/>
+      {/* ── REPLY BAR ── */}
+      {replyTo&&(
+        <div style={{background:"rgba(12,12,12,0.97)",backdropFilter:"blur(12px)",borderTop:"1px solid rgba(59,232,176,0.2)",padding:"8px 16px",display:"flex",alignItems:"center",gap:10,maxWidth:760,width:"100%",margin:"0 auto",boxSizing:"border-box" as const,animation:"slideIn .15s ease-out"}}>
+          <div style={{width:3,borderRadius:2,flexShrink:0,alignSelf:"stretch",background:accentG}}/>
           <div style={{flex:1,overflow:"hidden"}}>
-            <div style={{fontSize:"0.65rem",fontWeight:700,color:"#3be8b0",marginBottom:1}}>Replying to {replyTo.userName}</div>
-            {replyTo.imageData && <div style={{fontSize:"0.65rem",color:"rgba(255,255,255,0.4)"}}>🖼️ Image</div>}
-            {replyTo.text && <div style={{fontSize:"0.72rem",color:"rgba(255,255,255,0.5)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{replyTo.text}</div>}
+            <div style={{fontSize:"0.63rem",fontWeight:700,color:accentG,marginBottom:1}}>Replying to {replyTo.userName}</div>
+            {replyTo.imageData&&<div style={{fontSize:"0.63rem",color:muted}}>🖼 Image</div>}
+            {replyTo.text&&<div style={{fontSize:"0.72rem",color:"rgba(255,255,255,0.5)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{replyTo.text}</div>}
           </div>
-          <button onClick={()=>setReplyTo(null)}
-            style={{background:"rgba(255,107,107,0.15)",border:"none",color:"#ff6b6b",borderRadius:"50%",width:24,height:24,cursor:"pointer",fontSize:"0.75rem",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✕</button>
+          <button onClick={()=>setReplyTo(null)} style={{background:"rgba(255,107,107,0.12)",border:"none",color:accentR,borderRadius:"50%",width:24,height:24,cursor:"pointer",fontSize:"0.78rem",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✕</button>
         </div>
       )}
 
-      {/* ATTACHMENT PREVIEW */}
-      {(imagePreview || fileInfo) && (
-        <div style={{background:"#111",borderTop:"1px solid rgba(255,255,255,0.08)",padding:"10px 16px",display:"flex",alignItems:"center",gap:10,maxWidth:760,width:"100%",margin:"0 auto",boxSizing:"border-box" as const}}>
-          {imagePreview && <img src={imagePreview} alt="preview" style={{height:52,width:52,objectFit:"cover",borderRadius:8,border:"1px solid rgba(255,255,255,0.12)"}}/>}
-          {fileInfo && (
-            <div style={{display:"flex",alignItems:"center",gap:8,background:"rgba(255,255,255,0.05)",borderRadius:8,padding:"6px 12px",border:"1px solid rgba(255,255,255,0.1)"}}>
+      {/* ── ATTACHMENT PREVIEW ── */}
+      {(imagePreview||fileInfo)&&(
+        <div style={{background:"rgba(12,12,12,0.97)",backdropFilter:"blur(12px)",borderTop:"1px solid "+border,padding:"10px 16px",display:"flex",alignItems:"center",gap:10,maxWidth:760,width:"100%",margin:"0 auto",boxSizing:"border-box" as const}}>
+          {imagePreview&&<img src={imagePreview} alt="preview" style={{height:48,width:48,objectFit:"cover",borderRadius:8,border:"1px solid rgba(255,255,255,0.12)"}}/>}
+          {fileInfo&&(
+            <div style={{display:"flex",alignItems:"center",gap:8,background:glass,borderRadius:8,padding:"6px 12px",border:"1px solid "+border}}>
               <span>📎</span>
-              <span style={{fontSize:"0.78rem",color:"#ccc",maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{fileInfo.name}</span>
+              <span style={{fontSize:"0.76rem",color:"#ccc",maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{fileInfo.name}</span>
             </div>
           )}
-          <button onClick={clearAttachments} style={{marginLeft:"auto",background:"rgba(255,107,107,0.15)",border:"1px solid rgba(255,107,107,0.3)",color:accentR,borderRadius:"50%",width:26,height:26,cursor:"pointer",fontSize:"0.8rem",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+          <button onClick={clearAttachments} style={{marginLeft:"auto",background:"rgba(255,107,107,0.12)",border:"1px solid rgba(255,107,107,0.2)",color:accentR,borderRadius:"50%",width:26,height:26,cursor:"pointer",fontSize:"0.8rem",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
         </div>
       )}
 
-      {/* INPUT BAR */}
-      <div style={{background:"#111",borderTop:"1px solid rgba(255,255,255,0.08)",padding:"10px 12px",position:"sticky",bottom:0,zIndex:10}}>
-        <div style={{maxWidth:760,margin:"0 auto",display:"flex",alignItems:"flex-end",gap:8}}>
-          <input ref={imgInputRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleImageSelect}/>
-          <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx,.txt,.csv,.xlsx,.pptx" style={{display:"none"}} onChange={handleFileSelect}/>
-          <button onClick={()=>imgInputRef.current?.click()} title="Send image"
-            style={{background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:10,width:40,height:40,cursor:"pointer",fontSize:"1.1rem",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",color:"#ccc"}}>🖼️</button>
-          <button onClick={()=>fileInputRef.current?.click()} title="Send file"
-            style={{background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:10,width:40,height:40,cursor:"pointer",fontSize:"1.1rem",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",color:"#ccc"}}>📎</button>
-          <textarea ref={inputRef} value={text} onChange={e=>setText(e.target.value)} onKeyDown={handleKeyDown}
-            placeholder="Message the community… (Enter to send, Shift+Enter for newline)"
-            rows={1}
-            style={{flex:1,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.12)",
-              borderRadius:12,padding:"10px 14px",color:"#fff",fontFamily:"'DM Sans',sans-serif",
-              fontSize:"0.88rem",resize:"none",outline:"none",lineHeight:1.5,maxHeight:120,overflowY:"auto"}}
-            onInput={e=>{const t=e.target as HTMLTextAreaElement;t.style.height="auto";t.style.height=Math.min(t.scrollHeight,120)+"px";}}/>
-          <button onClick={handleSend} disabled={sending||(!text.trim()&&!imageData&&!fileInfo)}
-            style={{background:(text.trim()||imageData||fileInfo)?accentG:"rgba(255,255,255,0.08)",
-              color:(text.trim()||imageData||fileInfo)?"#0e0e0e":muted,
-              border:"none",borderRadius:10,width:40,height:40,cursor:"pointer",fontSize:"1.1rem",
-              flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s",fontWeight:700}}>
-            {sending?"…":"➤"}
-          </button>
-        </div>
-        <div style={{maxWidth:760,margin:"4px auto 0",paddingLeft:4}}>
-          <span style={{fontSize:"0.65rem",color:muted}}>Logged in as <strong style={{color:"rgba(255,255,255,0.5)"}}>{user.name||user.email}</strong>
-            {isAdmin(user)&&<span style={{marginLeft:6,background:accentR,color:"#fff",fontSize:"0.58rem",fontWeight:800,padding:"1px 7px",borderRadius:100}}>ADMIN</span>}
-          </span>
+      {/* ── INPUT BAR ── */}
+      <div style={{background:"rgba(10,10,10,0.97)",backdropFilter:"blur(20px)",borderTop:"1px solid "+border,padding:"10px 12px 12px",position:"sticky",bottom:0,zIndex:10}}>
+        <div style={{maxWidth:760,margin:"0 auto"}}>
+          <div style={{display:"flex",alignItems:"flex-end",gap:8}}>
+            <input ref={imgInputRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleImageSelect}/>
+            <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx,.txt,.csv,.xlsx" style={{display:"none"}} onChange={handleFileSelect}/>
+            <div style={{display:"flex",gap:6,flexShrink:0}}>
+              <button onClick={()=>imgInputRef.current?.click()} disabled={myStatus!=="active"}
+                style={{background:glass,border:"1px solid "+border,borderRadius:10,width:38,height:38,cursor:myStatus!=="active"?"not-allowed":"pointer",fontSize:"1rem",display:"flex",alignItems:"center",justifyContent:"center",opacity:myStatus!=="active"?.4:1}}>🖼️</button>
+              <button onClick={()=>fileInputRef.current?.click()} disabled={myStatus!=="active"}
+                style={{background:glass,border:"1px solid "+border,borderRadius:10,width:38,height:38,cursor:myStatus!=="active"?"not-allowed":"pointer",fontSize:"1rem",display:"flex",alignItems:"center",justifyContent:"center",opacity:myStatus!=="active"?.4:1}}>📎</button>
+            </div>
+            <div style={{flex:1,position:"relative" as const}}>
+              <textarea ref={inputRef} value={text} onChange={handleTextChange} onKeyDown={handleKeyDown}
+                placeholder={myStatus==="banned"?"You are banned from chat":myStatus==="muted"?"You are muted…":"Message "+ch.icon+" "+ch.label+"…"}
+                disabled={myStatus!=="active"}
+                rows={1}
+                style={{width:"100%",background:myStatus!=="active"?"rgba(255,255,255,0.03)":glass,border:"1px solid "+(text?"rgba(59,232,176,0.25)":border),borderRadius:14,padding:"10px 14px",color:"#fff",fontFamily:"'DM Sans',sans-serif",fontSize:"0.88rem",resize:"none",outline:"none",lineHeight:1.5,maxHeight:120,overflowY:"auto" as const,boxSizing:"border-box" as const,transition:"border-color .15s",backdropFilter:"blur(8px)",cursor:myStatus!=="active"?"not-allowed":"text",opacity:myStatus!=="active"?.5:1}}
+                onInput={e=>{const t=e.target as HTMLTextAreaElement;t.style.height="auto";t.style.height=Math.min(t.scrollHeight,120)+"px";}}/>
+            </div>
+            <button onClick={handleSend} disabled={sending||myStatus!=="active"||(!text.trim()&&!imageData&&!fileInfo)}
+              style={{background:(text.trim()||imageData||fileInfo)&&myStatus==="active"?accentG:"rgba(255,255,255,0.07)",color:(text.trim()||imageData||fileInfo)&&myStatus==="active"?"#0e0e0e":muted,border:"none",borderRadius:12,width:40,height:40,cursor:"pointer",fontSize:"1rem",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",transition:"all .2s",fontWeight:800,boxShadow:(text.trim()||imageData||fileInfo)&&myStatus==="active"?"0 4px 16px rgba(59,232,176,0.35)":"none"}}>
+              {sending?<span style={{display:"flex",gap:2}}>{[0,1,2].map(i=><span key={i} style={{width:3,height:3,borderRadius:"50%",background:"currentColor",display:"inline-block",animation:`typingDot .8s ${i*0.15}s infinite`}}/>)}</span>:"➤"}
+            </button>
+          </div>
+          <div style={{marginTop:5,paddingLeft:2,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <span style={{fontSize:"0.62rem",color:muted}}>
+              {user.name||user.email}
+              {isAdmin(user)&&<span style={{marginLeft:6,background:accentR,color:"#fff",fontSize:"0.56rem",fontWeight:800,padding:"1px 7px",borderRadius:100}}>ADMIN</span>}
+            </span>
+            <span style={{fontSize:"0.6rem",color:"rgba(255,255,255,0.18)"}}>Enter to send · Shift+Enter newline</span>
+          </div>
         </div>
       </div>
 
+      {/* ── MEMBER MANAGEMENT PANEL ── */}
+      {showMemberPanel&&isAdmin(user)&&(
+        <ChatMemberPanel onClose={()=>setShowMemberPanel(false)} currentUserEmail={user.email||""}/>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// X COMMUNITY PAGE — Curated X feed + pinned posts + accounts
+// ═══════════════════════════════════════════════════════════════
+const X_PINS_KEY = "aot_x_pins";
+interface XPin { id:string; tweetUrl:string; label:string; addedAt:number; }
+
+function getXPins():XPin[]{ try{return JSON.parse(localStorage.getItem(X_PINS_KEY)||"[]");}catch{return[];} }
+function saveXPins(pins:XPin[]){ try{localStorage.setItem(X_PINS_KEY,JSON.stringify(pins));}catch{} }
+function extractTweetId(url:string):string|null{ const m=url.match(/(?:twitter\.com|x\.com)\/\w+\/status\/(\d+)/);return m?m[1]:null; }
+
+function XCommunityPage({go,user}:{go:Function;user:any}) {
+  const [pins,setPins]           = useState<XPin[]>(getXPins);
+  const [newUrl,setNewUrl]       = useState("");
+  const [newLabel,setNewLabel]   = useState("");
+  const [showAdmin,setShowAdmin] = useState(false);
+
+  const accentG="#3be8b0",accentB="#4f8ef7",bg="#0e0e0e",card="#141414",border="rgba(255,255,255,0.08)",muted="rgba(255,255,255,0.4)";
+
+  useEffect(()=>{
+    if(!document.getElementById("twitter-wjs")){
+      const s=document.createElement("script");s.id="twitter-wjs";s.src="https://platform.twitter.com/widgets.js";s.async=true;document.body.appendChild(s);
+    } else { try{(window as any).twttr?.widgets?.load();}catch{} }
+  },[]);
+
+  const handleAddPin=()=>{
+    if(!newUrl.trim()) return;
+    const id=extractTweetId(newUrl.trim());
+    if(!id){alert("Not a valid X/Twitter post URL.");return;}
+    const pin:XPin={id,tweetUrl:newUrl.trim(),label:newLabel.trim()||"Featured post",addedAt:Date.now()};
+    const updated=[pin,...pins].slice(0,10);
+    setPins(updated);saveXPins(updated);setNewUrl("");setNewLabel("");setShowAdmin(false);
+  };
+  const handleRemovePin=(id:string)=>{ const u=pins.filter(p=>p.id!==id);setPins(u);saveXPins(u); };
+
+  const SUGGESTED=[
+    {handle:"PeptideSociety",desc:"Peptide research news & updates"},
+    {handle:"RetatrutideInfo",desc:"Retatrutide research community"},
+    {handle:"BPCresearch",desc:"BPC-157 studies & discussions"},
+  ];
+
+  return (
+    <div style={{background:bg,minHeight:"100vh",paddingTop:70,paddingBottom:100}}>
       <style>{`
-        @keyframes chatpulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:.5;transform:scale(.8);} }
-        @keyframes msgflash { 0%{background:rgba(59,232,176,0.15);} 100%{background:transparent;} }
-        .msg-flash { animation: msgflash 1.2s ease-out; }
-        .chat-bubble-wrap:hover .chat-actions { opacity:1!important; }
+        @keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+        .x-card{animation:fadeUp .25s ease-out;transition:transform .2s,box-shadow .2s;}.x-card:hover{transform:translateY(-2px);}
+        .account-chip:hover{background:rgba(79,142,247,0.15)!important;border-color:rgba(79,142,247,0.3)!important;}
       `}</style>
+      <div style={{maxWidth:700,margin:"0 auto",padding:"0 16px"}}>
+        {/* Header */}
+        <div style={{marginBottom:28,textAlign:"center",animation:"fadeUp .3s ease-out"}}>
+          <div style={{display:"inline-flex",alignItems:"center",gap:10,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:100,padding:"6px 16px 6px 10px",marginBottom:16}}>
+            <div style={{width:28,height:28,borderRadius:"50%",background:"#000",display:"flex",alignItems:"center",justifyContent:"center",border:"1px solid rgba(255,255,255,0.15)"}}>
+              <svg viewBox="0 0 24 24" style={{width:14,height:14,fill:"#fff"}}><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.259 5.63 5.905-5.63z"/></svg>
+            </div>
+            <span style={{fontSize:"0.8rem",fontWeight:700,color:"rgba(255,255,255,0.7)"}}>Community on X</span>
+          </div>
+          <h1 style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"clamp(1.6rem,4vw,2.2rem)",margin:"0 0 8px",lineHeight:1.1}}>Research Community</h1>
+          <p style={{color:muted,fontSize:"0.88rem",margin:0,lineHeight:1.6}}>Pinned highlights from the peptide research community on X.</p>
+        </div>
+
+        {/* Admin panel */}
+        {user&&isAdmin(user)&&(
+          <div style={{background:card,border:"1px solid rgba(255,107,107,0.2)",borderRadius:16,padding:16,marginBottom:20}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:showAdmin?14:0}}>
+              <div style={{fontSize:"0.75rem",fontWeight:700,color:"rgba(255,107,107,0.8)",letterSpacing:"0.07em"}}>👑 ADMIN: PIN A POST</div>
+              <button onClick={()=>setShowAdmin(!showAdmin)} style={{background:"rgba(255,107,107,0.1)",border:"1px solid rgba(255,107,107,0.2)",color:"rgba(255,107,107,0.8)",borderRadius:8,padding:"4px 12px",cursor:"pointer",fontSize:"0.75rem",fontWeight:700}}>{showAdmin?"Collapse":"Add Post"}</button>
+            </div>
+            {showAdmin&&(
+              <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                <input value={newUrl} onChange={e=>setNewUrl(e.target.value)} placeholder="X post URL (e.g. https://x.com/user/status/123…)"
+                  style={{width:"100%",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:10,padding:"10px 13px",color:"#fff",fontFamily:"inherit",fontSize:"0.85rem",outline:"none",boxSizing:"border-box" as const}}/>
+                <input value={newLabel} onChange={e=>setNewLabel(e.target.value)} placeholder="Label (optional)"
+                  style={{width:"100%",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:10,padding:"10px 13px",color:"#fff",fontFamily:"inherit",fontSize:"0.85rem",outline:"none",boxSizing:"border-box" as const}}/>
+                <button onClick={handleAddPin} style={{background:accentG,color:"#0e0e0e",border:"none",borderRadius:10,padding:"10px",fontFamily:"inherit",fontWeight:800,fontSize:"0.88rem",cursor:"pointer"}}>📌 Pin This Post</button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Pinned posts */}
+        {pins.length>0&&(
+          <div style={{marginBottom:28}}>
+            <div style={{fontSize:"0.7rem",fontWeight:700,color:muted,letterSpacing:"0.08em",marginBottom:12,display:"flex",alignItems:"center",gap:8}}><span>📌</span> PINNED BY ADMIN</div>
+            <div style={{display:"flex",flexDirection:"column",gap:12}}>
+              {pins.map((pin,i)=>(
+                <div key={pin.id} className="x-card" style={{background:card,border:"1px solid rgba(255,209,102,0.15)",borderRadius:16,overflow:"hidden",boxShadow:"0 4px 20px rgba(0,0,0,0.4)",animationDelay:`${i*0.06}s`}}>
+                  <div style={{padding:"10px 14px",background:"rgba(255,209,102,0.05)",borderBottom:"1px solid rgba(255,209,102,0.1)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                    <span style={{fontSize:"0.7rem",fontWeight:700,color:"rgba(255,209,102,0.8)",display:"flex",alignItems:"center",gap:6}}>📌 {pin.label}</span>
+                    <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                      <a href={pin.tweetUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:"0.68rem",color:accentB,textDecoration:"none",fontWeight:600}}>Open on X ↗</a>
+                      {user&&isAdmin(user)&&<button onClick={()=>handleRemovePin(pin.id)} style={{background:"rgba(255,107,107,0.1)",border:"none",color:"rgba(255,107,107,0.7)",borderRadius:6,padding:"2px 8px",cursor:"pointer",fontSize:"0.65rem"}}>Remove</button>}
+                    </div>
+                  </div>
+                  <div style={{padding:"14px 14px 10px"}}>
+                    <blockquote className="twitter-tweet" data-theme="dark" data-lang="en">
+                      <a href={pin.tweetUrl}>Loading post…</a>
+                    </blockquote>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {pins.length===0&&<div style={{textAlign:"center",padding:"32px 20px",color:muted,marginBottom:24}}><div style={{fontSize:"2.5rem",marginBottom:10}}>📌</div><div style={{fontSize:"0.88rem"}}>No posts pinned yet.{user&&isAdmin(user)?" Use the admin panel above to pin a post.":""}</div></div>}
+
+        {/* Live feed */}
+        <div style={{marginBottom:28}}>
+          <div style={{fontSize:"0.7rem",fontWeight:700,color:muted,letterSpacing:"0.08em",marginBottom:12,display:"flex",alignItems:"center",gap:8}}><span>🐦</span> LIVE FEED</div>
+          <div className="x-card" style={{background:card,border:"1px solid "+border,borderRadius:16,overflow:"hidden",boxShadow:"0 4px 20px rgba(0,0,0,0.4)"}}>
+            <div style={{padding:"14px 16px",background:"rgba(255,255,255,0.02)",borderBottom:"1px solid "+border,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <div style={{width:24,height:24,borderRadius:"50%",background:"#000",display:"flex",alignItems:"center",justifyContent:"center",border:"1px solid rgba(255,255,255,0.1)"}}>
+                  <svg viewBox="0 0 24 24" style={{width:13,height:13,fill:"#fff"}}><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.259 5.63 5.905-5.63z"/></svg>
+                </div>
+                <span style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"0.88rem",color:"#fff"}}>@alphaomegatides</span>
+              </div>
+              <a href="https://twitter.com/intent/follow?screen_name=alphaomegatides" target="_blank" rel="noopener noreferrer"
+                style={{background:"#000",border:"1px solid rgba(255,255,255,0.2)",borderRadius:100,padding:"5px 14px",color:"#fff",textDecoration:"none",fontSize:"0.75rem",fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
+                <svg viewBox="0 0 24 24" style={{width:12,height:12,fill:"#fff"}}><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.259 5.63 5.905-5.63z"/></svg>
+                Follow
+              </a>
+            </div>
+            <div style={{padding:"16px"}}>
+              <a className="twitter-timeline" data-theme="dark" data-height="480" data-chrome="noheader nofooter noborders transparent" data-tweet-limit="5" href="https://twitter.com/alphaomegatides">Loading X feed…</a>
+            </div>
+          </div>
+        </div>
+
+        {/* Suggested accounts */}
+        <div style={{marginBottom:20}}>
+          <div style={{fontSize:"0.7rem",fontWeight:700,color:muted,letterSpacing:"0.08em",marginBottom:12,display:"flex",alignItems:"center",gap:8}}><span>👥</span> SUGGESTED RESEARCH ACCOUNTS</div>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {SUGGESTED.map((acct,i)=>(
+              <a key={i} href={`https://x.com/${acct.handle}`} target="_blank" rel="noopener noreferrer" className="account-chip x-card"
+                style={{display:"flex",alignItems:"center",gap:12,background:card,border:"1px solid "+border,borderRadius:14,padding:"12px 14px",textDecoration:"none",transition:"all .2s",animationDelay:`${i*0.07}s`,boxShadow:"0 2px 12px rgba(0,0,0,0.3)"}}>
+                <div style={{width:36,height:36,borderRadius:"50%",background:"linear-gradient(135deg,#1a1a2e,#16213e)",display:"flex",alignItems:"center",justifyContent:"center",border:"1px solid rgba(255,255,255,0.1)",flexShrink:0}}>
+                  <svg viewBox="0 0 24 24" style={{width:16,height:16,fill:"rgba(255,255,255,0.7)"}}><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.259 5.63 5.905-5.63z"/></svg>
+                </div>
+                <div style={{flex:1}}>
+                  <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"0.88rem",color:"#fff"}}>@{acct.handle}</div>
+                  <div style={{fontSize:"0.72rem",color:muted}}>{acct.desc}</div>
+                </div>
+                <span style={{fontSize:"0.7rem",color:accentB,fontWeight:600}}>Follow ↗</span>
+              </a>
+            ))}
+          </div>
+        </div>
+
+        <div style={{background:"rgba(255,107,107,0.05)",border:"1px solid rgba(255,107,107,0.12)",borderRadius:12,padding:"12px 14px",fontSize:"0.72rem",color:"rgba(255,107,107,0.7)",lineHeight:1.6,textAlign:"center"}}>
+          ⚠️ Content from X/Twitter represents third-party opinions. All research discussed is for in-vitro purposes only.
+        </div>
+      </div>
     </div>
   );
 }
@@ -7554,7 +8214,7 @@ export default function App(){
     spg(p); if(id){spid(id); if(p==="category")setCatId(id);}
     setTimeout(()=>window.scrollTo(0,0),0);
     // Dynamic page title
-    const titles={home:"Alphaomegatides — Research Peptides",cart:"Cart — Alphaomegatides",quiz:"Find My Compound — Alphaomegatides",chat:"Community Chat — Alphaomegatides",journal:"Research Journal — Alphaomegatides",dosing:"Dosing Calculator — Alphaomegatides",stack:"Stack Checker — Alphaomegatides",dashboard:"My Account — Alphaomegatides",login:"Sign In — Alphaomegatides",register:"Create Account — Alphaomegatides",coa:"COA Library — Alphaomegatides",blog:"Research Blog — Alphaomegatides",about:"About Us — Alphaomegatides"};
+    const titles={home:"Alphaomegatides — Research Peptides",cart:"Cart — Alphaomegatides",quiz:"Find My Compound — Alphaomegatides",chat:"Community Chat — Alphaomegatides",xcommunity:"X Community — Alphaomegatides",journal:"Research Journal — Alphaomegatides",dosing:"Dosing Calculator — Alphaomegatides",stack:"Stack Checker — Alphaomegatides",dashboard:"My Account — Alphaomegatides",login:"Sign In — Alphaomegatides",register:"Create Account — Alphaomegatides",coa:"COA Library — Alphaomegatides",blog:"Research Blog — Alphaomegatides",about:"About Us — Alphaomegatides"};
     document.title=titles[p]||"Alphaomegatides";
   }
   function goBack(){
@@ -7660,6 +8320,7 @@ export default function App(){
     {pg==="category"&&catId&&<div key={"cat-"+catId} className="page-fade"><CategoryPage catId={catId} go={go} wishlist={wishlist} toggleWishlist={toggleWishlist}/></div>}
     {pg==="dashboard"&&(user?<Dashboard user={user} go={go} onLogout={()=>su(null)} wishlistIds={wishlist}/>:<Login go={go} onLogin={su}/>)}
     {pg==="chat"&&<MemberChatPage go={go} user={user}/>}
+    {pg==="xcommunity"&&<XCommunityPage go={go} user={user}/>}
 
     <MobileBottomNav go={go} pg={pg} cartCount={cart.length} user={user}/>
     <PWABanner/>
