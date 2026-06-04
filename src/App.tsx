@@ -631,22 +631,6 @@ function pointsToDollars(points:number):number{
   return points/POINTS_REDEEM_RATE;
 }
 
-// ── REFERRAL PROGRAM ──────────────────────────────────────
-function getReferralCode(email:string):string{
-  const base=btoa(email).replace(/[^a-zA-Z0-9]/g,"").substring(0,8).toUpperCase();
-  return "AO-"+base;
-}
-function trackReferral(code:string):void{
-  try{
-    const refs=JSON.parse(localStorage.getItem("ao_referrals")||"{}");
-    refs[code]=(refs[code]||0)+1;
-    localStorage.setItem("ao_referrals",JSON.stringify(refs));
-  }catch{}
-}
-function checkReferralCode(code:string):boolean{
-  // Valid if matches any AO-XXXXXXXX format
-  return /^AO-[A-Z0-9]{8}$/.test(code);
-}
 
 function getSess(){
   try{
@@ -1788,7 +1772,7 @@ function BundlesPage({go}: {go:(p:string,id?:string)=>void}) {
                   </div>
                   <button onClick={()=>{setActiveBundleId(bundle.id);setShowModal(true);}}
                     style={{width:"100%",padding:"11px",background:`linear-gradient(135deg,${bundle.color},${bundle.color}99)`,color:bundle.color==="#3be8b0"||bundle.color==="#ffd166"?"#0e0e0e":"#fff",border:"none",borderRadius:100,cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:"0.82rem"}}>
-                    🚀 {COMING_SOON ? "Join Waitlist for Stack" : "Add Stack to Cart"}
+                    Add Stack to Cart
                   </button>
                 </div>
               </div>
@@ -1894,7 +1878,7 @@ function QuizPage({go}: {go:(p:string,id?:string)=>void}) {
             </div>
             <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
               <button onClick={()=>setShowModal(true)} style={{flex:1,padding:"13px",background:"linear-gradient(135deg,#3be8b0,#4f8ef7)",color:"#0e0e0e",border:"none",borderRadius:100,cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:"0.88rem"}}>
-                🚀 Join Waitlist with These Interests
+                Shop Based on Your Interests
               </button>
               <button onClick={reset} style={{padding:"13px 20px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",color:"rgba(255,255,255,0.6)",borderRadius:100,cursor:"pointer",fontFamily:"inherit",fontSize:"0.85rem"}}>
                 Retake
@@ -2163,7 +2147,7 @@ function ComingSoonProductBtn({p, sel, textOnColor}) {
         style={{background:p.color,color:textOnColor||"#0e0e0e",border:"none",padding:"15px",fontSize:"1rem",borderRadius:100,cursor:"pointer",fontFamily:"inherit",fontWeight:700,width:"100%",transition:"opacity .2s"}}
         onMouseEnter={e=>e.currentTarget.style.opacity="0.88"} onMouseLeave={e=>e.currentTarget.style.opacity="1"}
         onClick={()=>setShowModal(true)}>
-        🚀 Join Waitlist — {sel?.p || "View Pricing"}
+        View Pricing →
       </button>
       <div style={{textAlign:"center",marginTop:8,fontSize:"0.72rem",color:"rgba(255,255,255,0.3)"}}>Store opens soon · Be the first to order</div>
       {showModal && <ComingSoonModal onClose={()=>setShowModal(false)} cartItems={[{name:p.name, id:p.id}]} sourcePage={`Product Page — ${p.name}`}/>}
@@ -2822,7 +2806,7 @@ function HeroWaitlistBtn() {
     <>
       <button onClick={()=>setShow(true)} style={{background:"transparent",color:"#3be8b0",border:"1.5px solid rgba(59,232,176,0.4)",padding:"11px 24px",borderRadius:100,cursor:"pointer",fontFamily:"inherit",fontWeight:600,fontSize:"0.88rem",transition:"all .2s"}}
         onMouseEnter={e=>{e.currentTarget.style.background="rgba(59,232,176,0.1)";}} onMouseLeave={e=>{e.currentTarget.style.background="transparent";}}>
-        🚀 Join Waitlist
+        Shop Now
       </button>
       {show && <ComingSoonModal onClose={()=>setShow(false)} sourcePage="Home Hero"/>}
     </>
@@ -3158,6 +3142,16 @@ function ProductPage({p,go,onAddToCart,wishlist=[],toggleWishlist=()=>{}}){
         <PrimaryBtn color={p.color} tc={textOnColor} full style={{padding:"15px",fontSize:"1rem",opacity:getStock(p.id)<=0?0.4:1,pointerEvents:getStock(p.id)<=0?"none":"auto"}} onClick={()=>{if(getStock(p.id)>0)onAddToCart&&onAddToCart(sel.s,sel.p);}}>
           {getStock(p.id)<=0?"— Out of Stock —":`Add to Cart — ${sel.p}`}
         </PrimaryBtn>
+      </div>
+
+      {/* Share button */}
+      <div style={{display:"flex",justifyContent:"flex-end",marginBottom:16}}>
+        <button onClick={async()=>{
+          const shareData={title:p.name,text:`${p.name} — ${p.tag}. Verified research compound.`,url:`https://alphaomegatides.com?product=${p.id}`};
+          try{if(navigator.share){await navigator.share(shareData);}else{await navigator.clipboard.writeText(shareData.url);alert("Product link copied!");}}catch{}
+        }} style={{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",color:"rgba(255,255,255,0.5)",borderRadius:100,padding:"7px 16px",fontFamily:"inherit",fontSize:"0.72rem",fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
+          📤 Share this compound
+        </button>
       </div>
 
       {/* Feature pills */}
@@ -3669,8 +3663,8 @@ function Dashboard({user,go,onLogout,wishlistIds=[]}){
   }
   const sColor={shipped:C.b,delivered:C.g,processing:C.y};
   const tabs=isAdmin(user)
-    ? [["orders","📦 Orders"],["profile","👤 Profile"],["progress","📊 Progress"],["wishlist","❤️ Wishlist"],["coa","🔬 My COAs"],["waitlist","📋 Waitlist"],["signups","👥 All Signups"],["flash","⚡ Flash Sale"]]
-    : [["orders","📦 Orders"],["profile","👤 Profile"],["progress","📊 Progress"],["wishlist","❤️ Wishlist"],["coa","🔬 My COAs"]];
+    ? [["orders","📦 Orders"],["profile","👤 Profile"],["progress","📊 Progress"],["wishlist","❤️ Wishlist"],["coa","🔬 My COAs"],["telegram","✈️ Telegram"],["waitlist","📋 Waitlist"],["signups","👥 All Signups"],["flash","⚡ Flash Sale"]]
+    : [["orders","📦 Orders"],["profile","👤 Profile"],["progress","📊 Progress"],["wishlist","❤️ Wishlist"],["coa","🔬 My COAs"],["telegram","✈️ Telegram"]];
 
   return <div style={{paddingTop:70,background:"#0e0e0e",minHeight:"100vh"}}>
     <div style={{maxWidth:1020,margin:"0 auto",padding:"40px 36px 80px"}}>
@@ -3941,8 +3935,7 @@ function Dashboard({user,go,onLogout,wishlistIds=[]}){
       {tab==="waitlist"&&isAdmin(user)&&<WaitlistAdmin/>}
       {tab==="signups"&&isAdmin(user)&&<AllSignupsAdmin/>}
       {tab==="flash"&&isAdmin(user)&&<FlashSaleAdmin/>}
-      {tab==="loyalty"&&<div style={{color:C.muted,padding:20}}>Coming soon</div>}
-      
+      {tab==="telegram"&&<div style={{padding:"8px 0"}}><TelegramLinkCard user={user} go={go}/></div>}
       {tab==="coa"&&<div>
         <div style={{fontFamily:"'Syne',sans-serif",fontSize:"1.2rem",fontWeight:700,marginBottom:5}}>Certificates of Analysis</div>
         <div style={{fontSize:"0.83rem",color:C.muted,marginBottom:24}}>Third-party lab certifications for all Alphaomegatides compounds. Independently tested by Freedom Diagnostics.</div>
@@ -4000,6 +3993,130 @@ function CheckoutPage({product:p, go, user}){
   </div>;
 }
 
+
+// ── ABANDONED CART — detect + email after 20 min ──────────────
+const ABANDON_KEY = "aot_abandon";
+function useAbandonedCart(cart: any[], user: any) {
+  const timerRef = React.useRef<any>(null);
+  React.useEffect(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (cart.length === 0) {
+      localStorage.removeItem(ABANDON_KEY);
+      return;
+    }
+    const already = localStorage.getItem(ABANDON_KEY);
+    if (already) return; // already sent
+    // 20 min = 1200000ms; use 2 min for demo: 120000
+    timerRef.current = setTimeout(async () => {
+      if (!user?.email) return;
+      localStorage.setItem(ABANDON_KEY, "1");
+      const items = cart.map((i: any) => `• ${i.name} (${i.selectedSize||i.size}) — ${i.selectedPrice||i.price}`).join("\n");
+      try {
+        await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${RESEND_API_KEY}` },
+          body: JSON.stringify({
+            from: "Alphaomegatides <noreply@alphaomegatides.com>",
+            to: [user.email],
+            subject: "You left something behind 🧬",
+            html: `<div style="font-family:sans-serif;max-width:560px;margin:0 auto;background:#0e0e0e;color:#fff;padding:32px;border-radius:16px">
+              <div style="font-size:2rem;margin-bottom:8px">🧬</div>
+              <h2 style="font-family:sans-serif;color:#3be8b0;margin:0 0 8px">Your cart is waiting</h2>
+              <p style="color:rgba(255,255,255,0.6);margin:0 0 20px">Hey ${user.fname||"Researcher"}, you left some compounds behind:</p>
+              <div style="background:#1c1c1c;border-radius:12px;padding:16px;margin-bottom:20px;white-space:pre-line;color:rgba(255,255,255,0.85);font-size:0.9rem">${items}</div>
+              <a href="https://alphaomegatides.com" style="background:#3be8b0;color:#0e0e0e;text-decoration:none;padding:14px 28px;border-radius:100px;font-weight:700;display:inline-block">Complete Your Order →</a>
+              <p style="color:rgba(255,255,255,0.3);font-size:0.72rem;margin-top:24px">For research use only · Alphaomegatides · US fulfillment only</p>
+            </div>`,
+          }),
+        });
+      } catch(e) { console.log("Abandon cart email failed:", e); }
+    }, 1200000); // 20 minutes
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, [cart.length, user?.email]);
+}
+
+// ── PWA INSTALL PROMPT ────────────────────────────────────────
+function usePWAInstall() {
+  const [prompt, setPrompt] = React.useState<any>(null);
+  const [installed, setInstalled] = React.useState(false);
+  React.useEffect(() => {
+    const handler = (e: any) => { e.preventDefault(); setPrompt(e); };
+    window.addEventListener("beforeinstallprompt", handler);
+    window.addEventListener("appinstalled", () => setInstalled(true));
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+  const install = async () => {
+    if (!prompt) return;
+    prompt.prompt();
+    const { outcome } = await prompt.userChoice;
+    if (outcome === "accepted") setInstalled(true);
+    setPrompt(null);
+  };
+  return { canInstall: !!prompt && !installed, install, installed };
+}
+
+function PWABanner() {
+  const { canInstall, install } = usePWAInstall();
+  const [dismissed, setDismissed] = React.useState(() => !!localStorage.getItem("aot_pwa_dismiss"));
+  if (!canInstall || dismissed) return null;
+  return (
+    <div style={{position:"fixed",bottom:70,left:12,right:12,zIndex:900,background:"linear-gradient(135deg,#1a1a2e,#16213e)",border:"1px solid rgba(59,232,176,0.3)",borderRadius:16,padding:"14px 16px",display:"flex",alignItems:"center",gap:12,boxShadow:"0 8px 32px rgba(0,0,0,0.5)"}}>
+      <div style={{fontSize:"1.8rem",flexShrink:0}}>📲</div>
+      <div style={{flex:1}}>
+        <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"0.88rem",color:"#fff",marginBottom:2}}>Install Alphaomegatides</div>
+        <div style={{fontSize:"0.72rem",color:"rgba(255,255,255,0.45)"}}>Add to home screen for faster access</div>
+      </div>
+      <button onClick={install} style={{background:"#3be8b0",color:"#0e0e0e",border:"none",borderRadius:100,padding:"8px 16px",fontFamily:"inherit",fontWeight:700,fontSize:"0.78rem",cursor:"pointer",flexShrink:0}}>Install</button>
+      <button onClick={()=>{setDismissed(true);localStorage.setItem("aot_pwa_dismiss","1");}} style={{background:"none",border:"none",color:"rgba(255,255,255,0.3)",cursor:"pointer",fontSize:"1rem",padding:"4px",flexShrink:0}}>✕</button>
+    </div>
+  );
+}
+
+// ── TELEGRAM DEEP-LINK QR IMPORT ─────────────────────────────
+// Shows a QR code that deep-links to a Telegram bot which
+// then creates/links their site account via a magic token.
+function TelegramLinkCard({user, go}: {user:any; go:Function}) {
+  const [copied, setCopied] = React.useState(false);
+  const [showQR, setShowQR] = React.useState(false);
+  const BOT_USERNAME = "AlphaomegatidesBOT"; // Set up @AlphaomegatidesBOT on Telegram
+  const token = user ? btoa(`${user.email}:${Date.now()}`).replace(/=/g,"") : "";
+  const deepLink = `https://t.me/${BOT_USERNAME}?start=${token}`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(deepLink)}&bgcolor=0e0e0e&color=3be8b0&margin=10`;
+
+  if (!user) return (
+    <div style={{background:"rgba(0,136,204,0.08)",border:"1px solid rgba(0,136,204,0.2)",borderRadius:16,padding:"20px",textAlign:"center" as const}}>
+      <div style={{fontSize:"1.8rem",marginBottom:8}}>📱</div>
+      <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"0.95rem",marginBottom:6}}>Link Telegram Account</div>
+      <div style={{fontSize:"0.78rem",color:"rgba(255,255,255,0.45)",marginBottom:14}}>Sign in first to link your Telegram</div>
+      <button onClick={()=>go("login")} style={{background:"#0088cc",color:"#fff",border:"none",borderRadius:100,padding:"10px 20px",fontFamily:"inherit",fontWeight:700,fontSize:"0.82rem",cursor:"pointer"}}>Sign In</button>
+    </div>
+  );
+
+  return (
+    <div style={{background:"rgba(0,136,204,0.08)",border:"1px solid rgba(0,136,204,0.25)",borderRadius:16,padding:"20px"}}>
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
+        <div style={{width:40,height:40,borderRadius:12,background:"#0088cc",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.3rem",flexShrink:0}}>✈️</div>
+        <div>
+          <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"0.95rem"}}>Link Telegram → Site</div>
+          <div style={{fontSize:"0.72rem",color:"rgba(255,255,255,0.4)"}}>Scan QR in Telegram app to link accounts</div>
+        </div>
+      </div>
+      {showQR ? (
+        <div style={{textAlign:"center" as const}}>
+          <img src={qrUrl} alt="Telegram QR" style={{width:180,height:180,borderRadius:12,border:"2px solid rgba(0,136,204,0.3)",display:"block",margin:"0 auto 12px"}}/>
+          <div style={{fontSize:"0.72rem",color:"rgba(255,255,255,0.4)",marginBottom:10}}>Scan with Telegram app → opens bot → links your account</div>
+          <button onClick={()=>{navigator.clipboard.writeText(deepLink);setCopied(true);setTimeout(()=>setCopied(false),2000);}} style={{background:"rgba(0,136,204,0.15)",border:"1px solid rgba(0,136,204,0.3)",color:"#0088cc",borderRadius:100,padding:"7px 16px",fontFamily:"inherit",fontSize:"0.75rem",fontWeight:600,cursor:"pointer"}}>
+            {copied?"✓ Copied!":"Copy Link"}
+          </button>
+        </div>
+      ) : (
+        <button onClick={()=>setShowQR(true)} style={{width:"100%",background:"#0088cc",color:"#fff",border:"none",borderRadius:12,padding:"12px",fontFamily:"inherit",fontWeight:700,fontSize:"0.88rem",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+          📱 Show QR Code
+        </button>
+      )}
+    </div>
+  );
+}
 
 function SiteFooter({go}){
   return <footer style={{background:"#0a0a0a",color:"rgba(255,255,255,0.38)",fontSize:"0.78rem",padding:"0"}}>
@@ -4594,6 +4711,24 @@ function ToastProvider() {
 // ═══════════════════════════════════════════════════════════════
 // FLOATING CHATBOT
 // ═══════════════════════════════════════════════════════════════
+// ── SCROLL TO TOP BUTTON ─────────────────────────────────────
+function ScrollToTopBtn() {
+  const [visible, setVisible] = React.useState(false);
+  React.useEffect(() => {
+    const handle = () => setVisible(window.scrollY > 400);
+    window.addEventListener("scroll", handle, {passive:true});
+    return () => window.removeEventListener("scroll", handle);
+  }, []);
+  if (!visible) return null;
+  return (
+    <button
+      onClick={() => window.scrollTo({top:0,behavior:"smooth"})}
+      style={{position:"fixed",bottom:78,right:16,zIndex:800,width:40,height:40,borderRadius:"50%",background:"rgba(59,232,176,0.15)",border:"1px solid rgba(59,232,176,0.3)",color:"#3be8b0",cursor:"pointer",fontSize:"1rem",display:"flex",alignItems:"center",justifyContent:"center",backdropFilter:"blur(8px)",boxShadow:"0 4px 16px rgba(0,0,0,0.3)",transition:"opacity .2s"}}>
+      ↑
+    </button>
+  );
+}
+
 function ChatWidget() {
   const [open,setOpen] = useState(false);
   const [msgs,setMsgs] = useState<{role:string;text:string}[]>([{role:"bot",text:"Hi! I'm the Alphaomegatides research assistant. Ask me anything about our compounds, reconstitution, protocols, or ordering."}]);
@@ -5424,7 +5559,7 @@ function ComingSoonBanner() {
           <strong style={{color:"#3be8b0"}}>Store launching soon</strong> — browse our compounds and join the waitlist
         </span>
         <button onClick={()=>setShowModal(true)} style={{background:"#3be8b0",color:"#0e0e0e",border:"none",padding:"4px 14px",borderRadius:100,cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:"0.72rem",flexShrink:0}}>
-          Join Waitlist →
+          Shop Compounds →
         </button>
         <button onClick={()=>setShow(false)} style={{background:"none",border:"none",color:"rgba(255,255,255,0.3)",cursor:"pointer",fontSize:"0.9rem",padding:0,marginLeft:4}}>✕</button>
       </div>
@@ -6168,6 +6303,24 @@ function ResearchJournalPage({go,user}:{go:Function,user:any}){
   const [entries,setEntries]=React.useState<any[]>(()=>{
     try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");}catch{return [];}
   });
+
+  // Firebase cross-device sync
+  React.useEffect(()=>{
+    if(!user?.email) return;
+    const safeEmail=(user.email||'').replace(/[.]/g,'_');
+    const fbPath=`/journals/${safeEmail}.json`;
+    fetch(`${FB_CONFIG.databaseURL}${fbPath}`)
+      .then(r=>r.ok?r.json():null)
+      .then(data=>{
+        if(!data) return;
+        const fbEntries=Array.isArray(data)?data:Object.values(data);
+        const local=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+        const ids=new Set(local.map((e:any)=>e.id));
+        const merged=[...local,...fbEntries.filter((e:any)=>!ids.has(e.id))].sort((a:any,b:any)=>b.id-a.id);
+        setEntries(merged);
+        localStorage.setItem(STORAGE_KEY,JSON.stringify(merged));
+      }).catch(()=>{});
+  },[user?.email]);
   const [form,setForm]=React.useState({compound:"",date:new Date().toISOString().split("T")[0],dose:"",route:"",notes:"",rating:"3"});
   const [adding,setAdding]=React.useState(false);
   const [filterCompound,setFilterCompound]=React.useState("");
@@ -6177,6 +6330,14 @@ function ResearchJournalPage({go,user}:{go:Function,user:any}){
     const newEntry={...form,id:Date.now(),createdAt:new Date().toISOString()};
     const updated=[newEntry,...entries];
     setEntries(updated);
+    // Push to Firebase for cross-device sync
+    if(user?.email){
+      const safeEmail=user.email.replace(/[.]/g,'_');
+      fetch(`${FB_CONFIG.databaseURL}/journals/${safeEmail}/${newEntry.id}.json`,{
+        method:'PUT',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(newEntry)
+      }).catch(()=>{});
+    }
     localStorage.setItem(STORAGE_KEY,JSON.stringify(updated));
     setForm({compound:"",date:new Date().toISOString().split("T")[0],dose:"",route:"",notes:"",rating:"3"});
     setAdding(false);
@@ -6660,7 +6821,10 @@ function MemberChatPage({go, user}: {go: Function; user: any}) {
         </div>
         <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:10}}>
           <button onClick={()=>loadMessages(true)} style={{background:"rgba(59,232,176,0.1)",border:"1px solid rgba(59,232,176,0.2)",color:accentG,borderRadius:8,padding:"5px 12px",cursor:"pointer",fontSize:"0.72rem",fontWeight:700}}>↻ Refresh</button>
-          <div style={{fontSize:"0.72rem",color:muted}}>Members only</div>
+          <div style={{fontSize:"0.72rem",color:muted,display:"flex",alignItems:"center",gap:6}}>
+            Members only
+            <LiveViewerBadge productId="community-chat"/>
+          </div>
         </div>
       </div>
 
@@ -6786,6 +6950,9 @@ function MemberChatPage({go, user}: {go: Function; user: any}) {
                         <button onClick={()=>{setReplyTo(msg);setTimeout(()=>inputRef.current?.focus(),50);}}
                           style={{background:"none",border:"none",color:"rgba(255,255,255,0.25)",cursor:"pointer",fontSize:"0.65rem",padding:"0 2px",lineHeight:1}}
                           title="Reply">↩</button>
+                        <button onClick={()=>{navigator.clipboard.writeText(`[${msg.userName}]: ${msg.text}`).catch(()=>{});}}
+                          style={{background:"none",border:"none",color:"rgba(255,255,255,0.18)",cursor:"pointer",fontSize:"0.6rem",padding:"0 2px",lineHeight:1}}
+                          title="Copy message">⎘</button>
                         {canDelete && msg.id && (
                           <button onClick={()=>handleDelete(msg.id!)}
                             disabled={deletingId===msg.id}
@@ -6994,8 +7161,9 @@ function FlashSaleBanner() {
         </span>
       )}
       {timeLeft && (
-        <span style={{color:col.accent,fontWeight:700,fontSize:"0.8rem",fontFamily:"monospace"}}>
-          ⏱ {timeLeft}
+        <span style={{display:"inline-flex",alignItems:"center",gap:4,background:"rgba(0,0,0,0.3)",borderRadius:8,padding:"3px 10px",marginLeft:4}}>
+          <span style={{fontSize:"0.6rem",color:col.accent,fontWeight:600,opacity:0.8,letterSpacing:"0.06em"}}>ENDS</span>
+          <span style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"0.88rem",color:col.accent,letterSpacing:"0.03em"}}>{timeLeft}</span>
         </span>
       )}
       <button onClick={()=>setDismissed(true)}
@@ -7249,9 +7417,60 @@ export default function App(){
   const [pg,spg]=useState("home");
   const [pid,spid]=useState(null);
   const [user,su]=useState(()=>getSess());
+  React.useEffect(()=>{
+  },[]);
+
+  // Inject PWA manifest dynamically
+  React.useEffect(()=>{
+    if(!document.querySelector("link[rel=manifest]")){
+      const manifest={
+        name:"Alphaomegatides",short_name:"AΩ",
+        description:"Verified research peptides — US fulfillment only",
+        start_url:"/",display:"standalone",
+        background_color:"#0e0e0e",theme_color:"#3be8b0",
+        icons:[
+          {src:"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%230e0e0e'/%3E%3Ctext x='24' y='130' font-size='100' font-family='serif' fill='%23ff6b6b'%3Eα%3C/text%3E%3Ctext x='100' y='130' font-size='100' font-family='serif' fill='%233be8b0'%3EΩ%3C/text%3E%3C/svg%3E",sizes:"192x192",type:"image/svg+xml"},
+          {src:"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%230e0e0e'/%3E%3Ctext x='40' y='360' font-size='300' font-family='serif' fill='%23ff6b6b'%3Eα%3C/text%3E%3Ctext x='270' y='360' font-size='300' font-family='serif' fill='%233be8b0'%3EΩ%3C/text%3E%3C/svg%3E",sizes:"512x512",type:"image/svg+xml"},
+        ],
+      };
+      const blob=new Blob([JSON.stringify(manifest)],{type:"application/json"});
+      const url=URL.createObjectURL(blob);
+      const link=document.createElement("link");
+      link.rel="manifest"; link.href=url;
+      document.head.appendChild(link);
+    }
+    // Theme color meta
+    if(!document.querySelector("meta[name=theme-color]")){
+      const meta=document.createElement("meta");
+      meta.name="theme-color"; meta.content="#3be8b0";
+      document.head.appendChild(meta);
+    }
+    // Open Graph / Twitter card meta for social sharing
+    const ogTags=[
+      {property:"og:title",content:"Alphaomegatides — Verified Research Peptides"},
+      {property:"og:description",content:"Independent third-party verified compounds. Full COA documentation. US fulfillment only."},
+      {property:"og:url",content:"https://alphaomegatides.com"},
+      {property:"og:type",content:"website"},
+      {property:"og:image",content:"https://alphaomegatides.com/og-image.png"},
+      {name:"twitter:card",content:"summary_large_image"},
+      {name:"twitter:title",content:"Alphaomegatides — Where the tide turns for all."},
+      {name:"twitter:description",content:"21 verified research compounds. COA on every vial. US only."},
+      {name:"description",content:"Verified research peptides with full COA documentation. BPC-157, TB-500, Semaglutide, NAD+, and 17 more. US fulfillment only."},
+    ];
+    ogTags.forEach(({property,name,content:c})=>{
+      const sel=property?"meta[property='"+property+"']":"meta[name='"+name+"']";
+      if(!document.querySelector(sel)){
+        const m=document.createElement("meta");
+        if(property) m.setAttribute("property",property); else m.setAttribute("name",name||'');
+        m.content=c||'';
+        document.head.appendChild(m);
+      }
+    });
+  },[]);
   useEffect(()=>{try{localStorage.removeItem("nxg_age");}catch{}},[]);
   const [aged,sa]=useState(()=>{try{return sessionStorage.getItem("nxg_age_sess")==="1";}catch{return false;}});
   const [cart,setCart]=useState([]);
+  useAbandonedCart(cart, user); // abandoned cart email after 20 min
   const [catId,setCatId]=useState(null);
   const [wishlist,setWishlist]=useState(()=>{try{return JSON.parse(localStorage.getItem("nxg_wish")||"[]");}catch{return[];}});
   const [recentlyViewed,setRecentlyViewed]=useState(()=>{try{return JSON.parse(localStorage.getItem("nxg_recent")||"[]");}catch{return[];}});
@@ -7290,6 +7509,9 @@ export default function App(){
     setHistory(h=>[...h,{pg:p,pid:id}]);
     spg(p); if(id){spid(id); if(p==="category")setCatId(id);}
     setTimeout(()=>window.scrollTo(0,0),0);
+    // Dynamic page title
+    const titles={home:"Alphaomegatides — Research Peptides",cart:"Cart — Alphaomegatides",quiz:"Find My Compound — Alphaomegatides",chat:"Community Chat — Alphaomegatides",journal:"Research Journal — Alphaomegatides",dosing:"Dosing Calculator — Alphaomegatides",stack:"Stack Checker — Alphaomegatides",dashboard:"My Account — Alphaomegatides",login:"Sign In — Alphaomegatides",register:"Create Account — Alphaomegatides",coa:"COA Library — Alphaomegatides",blog:"Research Blog — Alphaomegatides",about:"About Us — Alphaomegatides"};
+    document.title=titles[p]||"Alphaomegatides";
   }
   function goBack(){
     setHistory(h=>{
@@ -7323,10 +7545,9 @@ export default function App(){
     window.dispatchEvent(new Event("nxg_inv_update"));
     setCart(c=>[...c,{...product,selectedSize,selectedPrice}]);
     showToast(`${product.name} added to cart`);
-    // Award loyalty points preview (actual award on checkout)
     if(user?.email){
       const price=parseFloat((selectedPrice||product.price||"0").replace(/[^0-9.]/g,""));
-      if(price>0) window.dispatchEvent(new CustomEvent("ao_cart_add",{detail:{price,email:user.email}}));
+      if(price>0) localStorage.removeItem(ABANDON_KEY); // reset abandon timer on new add
     }
   }
   function removeFromCart(idx){ setCart(c=>c.filter((_,i)=>i!==idx)); }
@@ -7389,7 +7610,6 @@ export default function App(){
     {pg==="about"&&<AboutPage go={go}/>}
     {pg==="journal"&&(user?<ResearchJournalPage go={go} user={user}/>:<Login go={go} onLogin={su}/>)}
     {pg==="stack"&&<StackCheckerPage go={go}/>}
-    {/* loyalty and referral pages removed in v3 */}
     {pg==="dosing"&&<DosingCalculatorPage go={go}/>}
     {pg==="coa"&&<CoaLibraryPage go={go}/>}
     {pg==="research"&&<div key="research" className="page-fade"><ResearchLibraryPage go={go}/></div>}
@@ -7398,6 +7618,8 @@ export default function App(){
     {pg==="chat"&&<MemberChatPage go={go} user={user}/>}
 
     <MobileBottomNav go={go} pg={pg} cartCount={cart.length} user={user}/>
+    <PWABanner/>
+    <ScrollToTopBtn/>
     {/* ── SCROLL TO TOP + BACK BUTTONS ── */}
     <div style={{position:"fixed",bottom:88,left:16,display:"flex",flexDirection:"column",gap:8,zIndex:986}}>
       {canGoBack&&<button onClick={goBack}
