@@ -4,6 +4,16 @@ import React, { useState, useRef, useEffect } from "react";
 // SITE CONFIG — flip COMING_SOON to false when ready to open store
 // ═══════════════════════════════════════════════════════════════════
 const COMING_SOON = true;
+
+// ── ADMIN ACCOUNT ────────────────────────────────────────────────
+const ADMIN_EMAIL    = "alphaomegatides@yahoo.com";
+const ADMIN_PASSWORD = "Vizio12345!";
+function isAdminUser(email:string, pass:string):boolean {
+  return email.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase() && pass === ADMIN_PASSWORD;
+}
+function isAdmin(user:any):boolean {
+  return user?.email?.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase();
+}
 // ── SECURE: Add these to Vercel Dashboard → Settings → Environment Variables
 // Then they are NOT in your bundle. Keys below are fallbacks for local dev only.
 const RESEND_API_KEY = "re_gNzYdNZU_4Yx2Y916iJb6dSiBniGRchZF";
@@ -605,9 +615,9 @@ function getPoints(email:string):number{
   try{return parseInt(localStorage.getItem("ao_pts_"+btoa(email))||"0");}catch{return 0;}
 }
 function addPoints(email:string,dollars:number):number{
+  const pts=Math.floor(dollars*POINTS_PER_DOLLAR);
   const current=getPoints(email);
-  const earned=Math.floor(dollars*POINTS_PER_DOLLAR);
-  const newTotal=current+earned;
+  const newTotal=current+pts;
   try{localStorage.setItem("ao_pts_"+btoa(email),String(newTotal));}catch{}
   return newTotal;
 }
@@ -956,7 +966,7 @@ function Nav({user,go,onLogout,cartCount}){
             :[{icon:"👤",label:"Sign In",action:()=>{go("login");close();}},
               {icon:"✨",label:"Create Account",action:()=>{go("register");close();}}]
           ),
-          {icon:"🔬",label:"COA Library",action:()=>{go("coa");close();}},{icon:"📚",label:"Research Library",action:()=>{go("research");close();}},
+          {icon:"💬",label:"Community Chat",action:()=>{go("chat");close();}},{icon:"🔬",label:"COA Library",action:()=>{go("coa");close();}},{icon:"📚",label:"Research Library",action:()=>{go("research");close();}},
           {icon:"⚖️",label:"Legal & Compliance",action:()=>{go("compliance");close();}},
           {icon:"🎯",label:"Find My Compound",action:()=>{go("quiz");close();}},
           {icon:"📦",label:"Track My Order",action:()=>{go("track");close();}},
@@ -2031,6 +2041,107 @@ function WaitlistAdmin() {
 
 
 // ── COMING SOON PRODUCT BUTTON ──────────────────────────────────
+// ── ALL SIGNUPS ADMIN (admin-only dashboard tab) ─────────────────
+function AllSignupsAdmin() {
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [waitlist, setWaitlist] = useState<any[]>([]);
+  const [tab, setTab] = useState<"accounts"|"waitlist">("accounts");
+
+  useEffect(() => {
+    try {
+      // Load all registered accounts
+      const accs = JSON.parse(localStorage.getItem("aot_users") || "[]");
+      setAccounts(Array.isArray(accs) ? accs : []);
+    } catch {}
+    try {
+      const wl = JSON.parse(localStorage.getItem("aot_waitlist") || "[]");
+      setWaitlist(Array.isArray(wl) ? wl : []);
+    } catch {}
+  }, []);
+
+  const btnStyle = (active:boolean) => ({
+    background: active ? "#3be8b0" : "rgba(255,255,255,0.06)",
+    color: active ? "#0e0e0e" : "rgba(255,255,255,0.6)",
+    border: "none", borderRadius: 100,
+    padding: "7px 18px", fontFamily: "inherit", fontWeight: 700,
+    fontSize: "0.8rem", cursor: "pointer",
+  });
+
+  return (
+    <div>
+      <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1.1rem",marginBottom:4}}>All Signups</div>
+      <div style={{fontSize:"0.82rem",color:"rgba(255,255,255,0.4)",marginBottom:16}}>
+        {accounts.length} registered account{accounts.length!==1?"s":""} · {waitlist.length} on waitlist
+      </div>
+
+      {/* Sub-tabs */}
+      <div style={{display:"flex",gap:8,marginBottom:20}}>
+        <button style={btnStyle(tab==="accounts")} onClick={()=>setTab("accounts")}>
+          👤 Accounts ({accounts.length})
+        </button>
+        <button style={btnStyle(tab==="waitlist")} onClick={()=>setTab("waitlist")}>
+          📋 Waitlist ({waitlist.length})
+        </button>
+      </div>
+
+      {/* Accounts list */}
+      {tab==="accounts" && (
+        <div style={{display:"flex",flexDirection:"column",gap:8,maxHeight:420,overflowY:"auto"}}>
+          {accounts.length===0 && (
+            <div style={{color:"rgba(255,255,255,0.3)",fontSize:"0.85rem",padding:"20px 0"}}>No accounts yet.</div>
+          )}
+          {accounts.map((acc:any, i:number) => (
+            <div key={i} style={{background:"#1c1c1c",borderRadius:12,padding:"12px 14px",border:"1px solid rgba(255,255,255,0.07)"}}>
+              <div style={{fontWeight:600,fontSize:"0.85rem"}}>{acc.name || "(no name)"}</div>
+              <div style={{fontSize:"0.75rem",color:"#4f8ef7",marginTop:2}}>{acc.email}</div>
+              {acc.createdAt && (
+                <div style={{fontSize:"0.7rem",color:"rgba(255,255,255,0.3)",marginTop:3}}>
+                  Joined: {new Date(acc.createdAt).toLocaleDateString()}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Waitlist list */}
+      {tab==="waitlist" && (
+        <div style={{display:"flex",flexDirection:"column",gap:8,maxHeight:420,overflowY:"auto"}}>
+          {waitlist.length===0 && (
+            <div style={{color:"rgba(255,255,255,0.3)",fontSize:"0.85rem",padding:"20px 0"}}>No waitlist entries yet.</div>
+          )}
+          {waitlist.map((sub:any, i:number) => (
+            <div key={i} style={{background:"#1c1c1c",borderRadius:12,padding:"12px 14px",border:"1px solid rgba(255,255,255,0.07)"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8}}>
+                <div>
+                  <div style={{fontWeight:600,fontSize:"0.85rem"}}>{sub.name}</div>
+                  <div style={{fontSize:"0.75rem",color:"#4f8ef7"}}>{sub.email}</div>
+                  {sub.interests?.length>0 && (
+                    <div style={{fontSize:"0.7rem",color:"rgba(255,255,255,0.35)",marginTop:3}}>
+                      Interests: {sub.interests.join(", ")}
+                    </div>
+                  )}
+                  {sub.source && (
+                    <div style={{fontSize:"0.7rem",color:"rgba(255,255,255,0.25)",marginTop:2}}>
+                      Source: {sub.source}
+                    </div>
+                  )}
+                </div>
+                {sub.date && (
+                  <div style={{fontSize:"0.7rem",color:"rgba(255,255,255,0.3)",textAlign:"right"}}>
+                    {new Date(sub.date).toLocaleDateString()}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 function ComingSoonProductBtn({p, sel, textOnColor}) {
   const [showModal, setShowModal] = useState(false);
   return (
@@ -2525,25 +2636,7 @@ function Home({go,recentlyViewed=[],wishlist=[],toggleWishlist=()=>{}}){
       </div>
     </div>}
 
-    {/* ── LOYALTY POINTS BANNER ── */}
-    <div style={{background:"linear-gradient(135deg,rgba(59,232,176,0.06),rgba(168,85,247,0.06))",border:"1px solid rgba(59,232,176,0.12)",borderRadius:16,margin:"32px 24px 0",maxWidth:1092,marginLeft:"auto",marginRight:"auto",padding:"16px 24px",display:"flex",alignItems:"center",gap:16,flexWrap:"wrap" as const}}>
-      <span style={{fontSize:"1.3rem"}}>⭐</span>
-      <div style={{flex:1}}>
-        <div style={{fontWeight:700,fontSize:"0.9rem",marginBottom:2}}>Earn Loyalty Points on Every Order</div>
-        <div style={{color:"rgba(255,255,255,0.5)",fontSize:"0.8rem"}}>Earn 10 pts per $1 spent · Redeem 100 pts for $1 off · Points never expire</div>
-      </div>
-      <button onClick={()=>go("loyalty")} style={{background:"#3be8b0",color:"#0e0e0e",border:"none",borderRadius:100,padding:"9px 20px",fontFamily:"inherit",fontWeight:700,fontSize:"0.82rem",cursor:"pointer",whiteSpace:"nowrap" as const}}>View Rewards</button>
-    </div>
-
-    {/* ── REFERRAL BANNER ── */}
-    <div style={{background:"linear-gradient(135deg,rgba(255,107,107,0.06),rgba(168,85,247,0.06))",border:"1px solid rgba(255,107,107,0.12)",borderRadius:16,margin:"12px 24px 0",maxWidth:1092,marginLeft:"auto",marginRight:"auto",padding:"16px 24px",display:"flex",alignItems:"center",gap:16,flexWrap:"wrap" as const}}>
-      <span style={{fontSize:"1.3rem"}}>🎁</span>
-      <div style={{flex:1}}>
-        <div style={{fontWeight:700,fontSize:"0.9rem",marginBottom:2}}>Refer a Researcher, Earn Rewards</div>
-        <div style={{color:"rgba(255,255,255,0.5)",fontSize:"0.8rem"}}>Share your unique link · Earn 500 pts when they order · They get 200 pts too</div>
-      </div>
-      <button onClick={()=>go("referral")} style={{background:"#ff6b6b",color:"#ffffff",border:"none",borderRadius:100,padding:"9px 20px",fontFamily:"inherit",fontWeight:700,fontSize:"0.82rem",cursor:"pointer",whiteSpace:"nowrap" as const}}>Get Your Link</button>
-    </div>
+    
 
     {/* Quick nav pills */}
     <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap",padding:"32px 36px 0",background:"#0e0e0e"}}>
@@ -2959,9 +3052,16 @@ function ContactPage({go}){
 
 // ── REGISTER ────────────────────────────────────────
 function Register({go,onLogin}){
-  const [f,sf]=useState({fname:"",lname:"",email:"",pass:"",phone:"",street:"",apt:"",city:"",state:"",zip:""});
-  const [terms,st]=useState(false);
-  const [err,se]=useState("");
+  const [step, setStep]   = useState<"form"|"verify">("form");
+  const [f,sf]            = useState({fname:"",lname:"",email:"",pass:"",phone:"",street:"",apt:"",city:"",state:"",zip:""});
+  const [terms,st]        = useState(false);
+  const [err,se]          = useState("");
+  const [otp,setOtp]      = useState("");
+  const [otpInput,setOtpInput] = useState("");
+  const [otpSending,setOtpSending] = useState(false);
+  const [otpVerifying,setOtpVerifying] = useState(false);
+  const [resendCooldown,setResendCooldown] = useState(0);
+  const cooldownRef = useRef<any>(null);
   const set=(k,v)=>sf(p=>({...p,[k]:v}));
 
   function handleAddressSelect(full, parts) {
@@ -2974,80 +3074,191 @@ function Register({go,onLogin}){
     }
   }
 
-  function submit(){
-    if(!f.fname||!f.lname||!f.email||!f.pass||!f.phone||!f.street||!f.city||!f.state||!f.zip){se("Please fill in all required fields.");return;}
-    if(!f.email.includes("@")){se("Enter a valid email.");return;}
+  // Generate a 6-digit OTP and send via Resend
+  async function sendOtp(email:string, name:string):Promise<boolean> {
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const expires = Date.now() + 10 * 60 * 1000; // 10 minutes
+    try {
+      localStorage.setItem("aot_otp", JSON.stringify({ code, email: email.toLowerCase(), expires }));
+    } catch {}
+    setOtp(code);
+    try {
+      await fetch("/api/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "otp_verify",
+          data: { to_email: email, to_name: name, code },
+        }),
+      });
+      return true;
+    } catch { return false; }
+  }
+
+  async function handleFormSubmit() {
+    if(!f.fname||!f.lname||!f.email||!f.pass||!f.phone||!f.street||!f.city||!f.state||!f.zip){
+      se("Please fill in all required fields."); return;
+    }
+    if(!f.email.includes("@")||!f.email.includes(".")){se("Enter a valid email address.");return;}
     if(f.pass.length<8){se("Password must be at least 8 characters.");return;}
     if(!terms){se("Please agree to the Terms of Service.");return;}
     const users=getUsers();
-    if(users[f.email.toLowerCase()]){se("Account already exists with this email.");return;}
-    const u={...f,email:f.email.toLowerCase(),address:{street:f.street,apt:f.apt,city:f.city,state:f.state,zip:f.zip},orders:[],createdAt:new Date().toISOString()};
-    users[u.email]=u; saveUsers(users); setSess(u); onLogin(u);
-    // Send signup notification to alphaomegatides@yahoo.com
+    if(users[f.email.toLowerCase()]){se("An account already exists with this email.");return;}
+    se(""); setOtpSending(true);
+    const sent = await sendOtp(f.email, f.fname);
+    setOtpSending(false);
+    if (!sent) { se("Could not send verification email. Check your email address and try again."); return; }
+    setStep("verify");
+    startCooldown();
+  }
+
+  function startCooldown() {
+    setResendCooldown(60);
+    clearInterval(cooldownRef.current);
+    cooldownRef.current = setInterval(() => {
+      setResendCooldown(c => { if(c<=1){clearInterval(cooldownRef.current);return 0;} return c-1; });
+    }, 1000);
+  }
+
+  async function handleResend() {
+    if(resendCooldown>0) return;
+    setOtpSending(true);
+    await sendOtp(f.email, f.fname);
+    setOtpSending(false);
+    startCooldown();
+  }
+
+  function handleVerify() {
+    setOtpVerifying(true);
+    se("");
+    try {
+      const stored = JSON.parse(localStorage.getItem("aot_otp")||"null");
+      if (!stored) { se("Verification code expired. Please request a new one."); setOtpVerifying(false); return; }
+      if (Date.now() > stored.expires) { se("Code expired (10 min limit). Tap 'Resend Code' to get a new one."); setOtpVerifying(false); return; }
+      if (stored.email !== f.email.toLowerCase()) { se("Email mismatch. Please restart."); setOtpVerifying(false); return; }
+      if (otpInput.trim() !== stored.code) { se("Incorrect code. Check your email and try again."); setOtpVerifying(false); return; }
+    } catch { se("Verification error. Please try again."); setOtpVerifying(false); return; }
+    // OTP correct — create account
+    try { localStorage.removeItem("aot_otp"); } catch {}
+    const u={...f,email:f.email.toLowerCase(),verified:true,address:{street:f.street,apt:f.apt,city:f.city,state:f.state,zip:f.zip},orders:[],createdAt:new Date().toISOString()};
+    const users=getUsers(); users[u.email]=u; saveUsers(users); setSess(u); onLogin(u);
     fetch("/api/send-email",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({
-        type:"account_signup",
-        data:{fname:f.fname,lname:f.lname,email:f.email,phone:f.phone,street:f.street,apt:f.apt,city:f.city,state:f.state,zip:f.zip}
-      })
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({type:"account_signup",data:{fname:f.fname,lname:f.lname,email:f.email,phone:f.phone,street:f.street,apt:f.apt,city:f.city,state:f.state,zip:f.zip}})
     }).catch(()=>{});
+    setOtpVerifying(false);
     go("dashboard");
   }
 
-  return <div style={{paddingTop:70,minHeight:"100vh",background:"#0e0e0e",display:"flex",alignItems:"center",justifyContent:"center",padding:"100px 20px 60px"}}>
-    <div style={{background:"#1a1a1a",borderRadius:24,padding:40,maxWidth:520,width:"100%",border:"1px solid rgba(255,255,255,0.08)",boxShadow:"0 16px 48px rgba(0,0,0,0.5)"}}>
-      <div style={{textAlign:"center",marginBottom:28}}>
-        <div style={{fontFamily:"'Syne',sans-serif",fontSize:"1.4rem",fontWeight:800,marginBottom:3}}>Alpha<span style={{color:"#ff6b6b"}}>ω</span><span style={{color:"#3be8b0"}}>mega</span>tides</div>
-        <div style={{fontFamily:"'Syne',sans-serif",fontSize:"1.55rem",fontWeight:800,letterSpacing:"-.03em"}}>Create Account</div>
-        <div style={{fontSize:"0.8rem",color:C.muted,marginTop:4}}>🇺🇸 US researchers only · Domestic fulfillment only</div>
-      </div>
-      {err&&<div style={{background:"rgba(255,107,107,0.1)",border:"1px solid rgba(255,107,107,0.3)",borderRadius:9,padding:"9px 14px",fontSize:"0.82rem",color:"#c0392b",marginBottom:16}}>{err}</div>}
-      <div style={{display:"flex",flexDirection:"column",gap:13}}>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
-          <Field label="First Name" value={f.fname} onChange={e=>set("fname",e.target.value)} placeholder="John"/>
-          <Field label="Last Name" value={f.lname} onChange={e=>set("lname",e.target.value)} placeholder="Doe"/>
+  // ── STEP 1: Registration Form ──────────────────────────────────
+  if (step === "form") return (
+    <div style={{paddingTop:70,minHeight:"100vh",background:"#0e0e0e",display:"flex",alignItems:"center",justifyContent:"center",padding:"100px 20px 60px"}}>
+      <div style={{background:"#1a1a1a",borderRadius:24,padding:40,maxWidth:520,width:"100%",border:"1px solid rgba(255,255,255,0.08)",boxShadow:"0 16px 48px rgba(0,0,0,0.5)"}}>
+        <div style={{textAlign:"center",marginBottom:28}}>
+          <div style={{fontFamily:"'Syne',sans-serif",fontSize:"1.4rem",fontWeight:800,marginBottom:3}}>Alpha<span style={{color:"#ff6b6b"}}>ω</span><span style={{color:"#3be8b0"}}>mega</span>tides</div>
+          <div style={{fontFamily:"'Syne',sans-serif",fontSize:"1.55rem",fontWeight:800,letterSpacing:"-.03em"}}>Create Account</div>
+          <div style={{fontSize:"0.8rem",color:C.muted,marginTop:4}}>🇺🇸 US researchers only · Domestic fulfillment only</div>
         </div>
-        <Field label="Email Address" type="email" value={f.email} onChange={e=>set("email",e.target.value)} placeholder="john@example.com"/>
-        <Field label="Password (min 8 chars)" type="password" value={f.pass} onChange={e=>set("pass",e.target.value)} placeholder="Min. 8 characters"/>
-        <Field label="Phone Number" type="tel" value={f.phone} onChange={e=>set("phone",e.target.value)} placeholder="(555) 000-0000"/>
-        <div style={{borderTop:"1px solid rgba(0,0,0,0.08)",paddingTop:16,display:"flex",flexDirection:"column",gap:11}}>
-          <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"0.88rem",display:"flex",alignItems:"center",gap:8}}>
-            Shipping Address
-            <span style={{background:"rgba(79,142,247,0.12)",color:C.b,fontSize:"0.65rem",padding:"2px 10px",borderRadius:100,fontWeight:600}}>🇺🇸 US Only</span>
-          </div>
-          <AddressField
-            label="Street Address"
-            value={f.street}
-            onChange={v=>set("street",v)}
-            onSelect={handleAddressSelect}
-            placeholder="Start typing your address…"
-          />
-          <Field label="Apt / Suite (optional)" value={f.apt} onChange={e=>set("apt",e.target.value)} placeholder="Apt 4B"/>
+        {err&&<div style={{background:"rgba(255,107,107,0.1)",border:"1px solid rgba(255,107,107,0.3)",borderRadius:9,padding:"9px 14px",fontSize:"0.82rem",color:"#c0392b",marginBottom:16}}>{err}</div>}
+        <div style={{display:"flex",flexDirection:"column",gap:13}}>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
-            <Field label="City" value={f.city} onChange={e=>set("city",e.target.value)} placeholder="Miami"/>
-            <StateSelect label="State" value={f.state} onChange={e=>set("state",e.target.value)}/>
+            <Field label="First Name" value={f.fname} onChange={e=>set("fname",e.target.value)} placeholder="John"/>
+            <Field label="Last Name" value={f.lname} onChange={e=>set("lname",e.target.value)} placeholder="Doe"/>
           </div>
-          <div style={{maxWidth:160}}>
-            <Field label="ZIP Code" value={f.zip} onChange={e=>set("zip",e.target.value)} placeholder="33101" maxLength={10}/>
+          <Field label="Email Address" type="email" value={f.email} onChange={e=>set("email",e.target.value)} placeholder="john@example.com"/>
+          <div style={{background:"rgba(59,232,176,0.06)",border:"1px solid rgba(59,232,176,0.2)",borderRadius:8,padding:"8px 12px",fontSize:"0.75rem",color:"rgba(59,232,176,0.8)"}}>
+            ✉️ A 6-digit verification code will be sent to this email address.
           </div>
+          <Field label="Password (min 8 chars)" type="password" value={f.pass} onChange={e=>set("pass",e.target.value)} placeholder="Min. 8 characters"/>
+          <Field label="Phone Number" type="tel" value={f.phone} onChange={e=>set("phone",e.target.value)} placeholder="(555) 000-0000"/>
+          <div style={{borderTop:"1px solid rgba(255,255,255,0.06)",paddingTop:16,display:"flex",flexDirection:"column",gap:11}}>
+            <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"0.88rem",display:"flex",alignItems:"center",gap:8}}>
+              Shipping Address
+              <span style={{background:"rgba(79,142,247,0.12)",color:C.b,fontSize:"0.65rem",padding:"2px 10px",borderRadius:100,fontWeight:600}}>🇺🇸 US Only</span>
+            </div>
+            <AddressField label="Street Address" value={f.street} onChange={v=>set("street",v)} onSelect={handleAddressSelect} placeholder="Start typing your address…"/>
+            <Field label="Apt / Suite (optional)" value={f.apt} onChange={e=>set("apt",e.target.value)} placeholder="Apt 4B"/>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
+              <Field label="City" value={f.city} onChange={e=>set("city",e.target.value)} placeholder="Miami"/>
+              <StateSelect label="State" value={f.state} onChange={e=>set("state",e.target.value)}/>
+            </div>
+            <div style={{maxWidth:160}}>
+              <Field label="ZIP Code" value={f.zip} onChange={e=>set("zip",e.target.value)} placeholder="33101" maxLength={10}/>
+            </div>
+          </div>
+          <div style={{display:"flex",alignItems:"flex-start",gap:9}}>
+            <input type="checkbox" checked={terms} onChange={e=>st(e.target.checked)} style={{marginTop:3,cursor:"pointer",width:15,height:15,flexShrink:0}}/>
+            <label style={{fontSize:"0.77rem",color:C.muted,cursor:"pointer",lineHeight:1.5}}>I confirm I am in the <strong>United States</strong>, agree to the Terms of Service, and acknowledge all products are <strong>for research use only — not for human use</strong>.</label>
+          </div>
+          <PrimaryBtn onClick={handleFormSubmit} full style={{padding:"14px",fontSize:"0.95rem"}}>
+            {otpSending ? "Sending verification code…" : "Continue — Verify Email →"}
+          </PrimaryBtn>
+          <div style={{textAlign:"center",fontSize:"0.82rem",color:C.muted}}>Already have an account? <span onClick={()=>go("login")} style={{color:C.b,cursor:"pointer",fontWeight:600}}>Sign in</span></div>
         </div>
-        <div style={{display:"flex",alignItems:"flex-start",gap:9}}>
-          <input type="checkbox" checked={terms} onChange={e=>st(e.target.checked)} style={{marginTop:3,cursor:"pointer",width:15,height:15,flexShrink:0}}/>
-          <label style={{fontSize:"0.77rem",color:C.muted,cursor:"pointer",lineHeight:1.5}}>I confirm I am in the <strong>United States</strong>, agree to the Terms of Service, and acknowledge all products are <strong>for research use only — not for research use</strong>.</label>
-        </div>
-        <PrimaryBtn onClick={submit} full style={{padding:"14px",fontSize:"0.95rem"}}>Create My Account</PrimaryBtn>
-        <div style={{textAlign:"center",fontSize:"0.82rem",color:C.muted}}>Already have an account? <span onClick={()=>go("login")} style={{color:C.b,cursor:"pointer",fontWeight:600}}>Sign in</span></div>
       </div>
     </div>
-  </div>;
+  );
+
+  // ── STEP 2: OTP Verification ───────────────────────────────────
+  return (
+    <div style={{paddingTop:70,minHeight:"100vh",background:"#0e0e0e",display:"flex",alignItems:"center",justifyContent:"center",padding:"100px 20px 60px"}}>
+      <div style={{background:"#1a1a1a",borderRadius:24,padding:40,maxWidth:440,width:"100%",border:"1px solid rgba(255,255,255,0.08)",boxShadow:"0 16px 48px rgba(0,0,0,0.5)",textAlign:"center"}}>
+        <div style={{fontSize:"3rem",marginBottom:12}}>✉️</div>
+        <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1.4rem",marginBottom:8}}>Check your email</div>
+        <div style={{fontSize:"0.85rem",color:C.muted,marginBottom:6}}>We sent a 6-digit code to</div>
+        <div style={{fontWeight:700,color:"#3be8b0",fontSize:"0.95rem",marginBottom:24}}>{f.email}</div>
+
+        {err&&<div style={{background:"rgba(255,107,107,0.1)",border:"1px solid rgba(255,107,107,0.3)",borderRadius:9,padding:"9px 14px",fontSize:"0.82rem",color:"#c0392b",marginBottom:16}}>{err}</div>}
+
+        {/* 6-digit input */}
+        <input
+          value={otpInput}
+          onChange={e=>setOtpInput(e.target.value.replace(/\D/g,"").slice(0,6))}
+          placeholder="000000"
+          maxLength={6}
+          style={{
+            width:"100%",textAlign:"center",letterSpacing:"0.4em",fontSize:"2rem",fontWeight:800,
+            background:"rgba(255,255,255,0.05)",border:"2px solid rgba(59,232,176,0.3)",
+            borderRadius:14,padding:"16px",color:"#fff",outline:"none",
+            fontFamily:"'DM Sans',sans-serif",boxSizing:"border-box" as const,marginBottom:16,
+          }}
+          onKeyDown={e=>{ if(e.key==="Enter"&&otpInput.length===6) handleVerify(); }}
+        />
+
+        <PrimaryBtn onClick={handleVerify} full style={{padding:"13px",fontSize:"0.95rem",marginBottom:16}}
+          disabled={otpInput.length!==6||otpVerifying}>
+          {otpVerifying ? "Verifying…" : "Verify & Create Account"}
+        </PrimaryBtn>
+
+        <div style={{fontSize:"0.82rem",color:C.muted,marginBottom:8}}>
+          Didn't receive it? Check your spam folder.
+        </div>
+        <button onClick={handleResend} disabled={resendCooldown>0||otpSending}
+          style={{background:"none",border:"none",color:resendCooldown>0?C.muted:"#4f8ef7",cursor:resendCooldown>0?"default":"pointer",fontSize:"0.82rem",fontWeight:600,padding:"4px 0"}}>
+          {resendCooldown>0 ? `Resend in ${resendCooldown}s` : otpSending ? "Sending…" : "↺ Resend Code"}
+        </button>
+
+        <div style={{marginTop:20,paddingTop:16,borderTop:"1px solid rgba(255,255,255,0.06)"}}>
+          <button onClick={()=>{setStep("form");se("");setOtpInput("");}}
+            style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:"0.8rem"}}>
+            ← Back to edit email
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
-// ── LOGIN ────────────────────────────────────────────
 function Login({go,onLogin}){
   const [email,se]=useState(""); const [pass,sp]=useState(""); const [err,serr]=useState("");
   function submit(){
     if(!email||!pass){serr("Please enter your email and password.");return;}
+    // ── ADMIN ACCOUNT CHECK ──────────────────────────────────────
+    if(isAdminUser(email, pass)){
+      const adminUser={email:ADMIN_EMAIL,name:"Admin",role:"admin",createdAt:new Date().toISOString()};
+      setSess(adminUser); onLogin(adminUser); go("dashboard"); return;
+    }
+    // ── REGULAR USER ─────────────────────────────────────────────
     const users=getUsers(); const u=users[email.toLowerCase()];
     if(!u||u.pass!==pass){serr("Incorrect email or password.");return;}
     setSess(u); onLogin(u); go("dashboard");
@@ -3113,7 +3324,9 @@ function Dashboard({user,go,onLogout,wishlistIds=[]}){
     });
   }
   const sColor={shipped:C.b,delivered:C.g,processing:C.y};
-  const tabs=[["orders","📦 Orders"],["profile","👤 Profile"],["progress","📊 Progress"],["wishlist","❤️ Wishlist"],["coa","🔬 My COAs"],["loyalty","⭐ Rewards"],["referral","🎁 Refer & Earn"],["waitlist","📋 Waitlist"],["affiliate","🔗 Affiliate"]];
+  const tabs=isAdmin(user)
+    ? [["orders","📦 Orders"],["profile","👤 Profile"],["progress","📊 Progress"],["wishlist","❤️ Wishlist"],["coa","🔬 My COAs"],["waitlist","📋 Waitlist"],["signups","👥 All Signups"],["flash","⚡ Flash Sale"]]
+    : [["orders","📦 Orders"],["profile","👤 Profile"],["progress","📊 Progress"],["wishlist","❤️ Wishlist"],["coa","🔬 My COAs"]];
 
   return <div style={{paddingTop:70,background:"#0e0e0e",minHeight:"100vh"}}>
     <div style={{maxWidth:1020,margin:"0 auto",padding:"40px 36px 80px"}}>
@@ -3381,49 +3594,11 @@ function Dashboard({user,go,onLogout,wishlistIds=[]}){
         }
       </div>}
 
-      {tab==="waitlist"&&<WaitlistAdmin/>}
-      {tab==="referral"&&<ReferralPage go={go} user={user}/>}
-      {tab==="affiliate"&&<AffiliateAdminPanel/>}
-      {tab==="loyalty"&&<div>
-        <div style={{fontFamily:"'Syne',sans-serif",fontSize:"1.2rem",fontWeight:700,marginBottom:5}}>Loyalty Rewards</div>
-        <div style={{fontSize:"0.83rem",color:C.muted,marginBottom:24}}>Earn points on every order. Redeem for discounts.</div>
-        {(()=>{
-          const pts=getPoints(user.email||"");
-          const dollars=(pts/POINTS_REDEEM_RATE).toFixed(2);
-          const code=getReferralCode(user.email||"");
-          return <div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:24}}>
-              <div style={{background:"linear-gradient(135deg,rgba(59,232,176,0.1),rgba(168,85,247,0.08))",border:"1px solid rgba(59,232,176,0.2)",borderRadius:16,padding:"20px"}}>
-                <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"2rem",color:"#3be8b0"}}>{pts.toLocaleString()}</div>
-                <div style={{fontSize:"0.8rem",color:C.muted,marginTop:4}}>Points Balance</div>
-                <div style={{fontSize:"0.78rem",color:"rgba(59,232,176,0.7)",marginTop:6}}>≈ ${dollars} in rewards</div>
-              </div>
-              <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:16,padding:"20px"}}>
-                <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1.1rem"}}>{POINTS_PER_DOLLAR} pts / $1</div>
-                <div style={{fontSize:"0.8rem",color:C.muted,marginTop:4}}>Earning Rate</div>
-                <div style={{fontSize:"0.78rem",color:C.muted,marginTop:6}}>100 pts = $1 off your next order</div>
-              </div>
-            </div>
-            <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:16,padding:"20px",marginBottom:16}}>
-              <div style={{fontWeight:700,fontSize:"0.9rem",marginBottom:12}}>🎁 Your Referral Code</div>
-              <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap" as const}}>
-                <code style={{background:"#1a1a1a",border:"1px solid rgba(59,232,176,0.3)",borderRadius:8,padding:"8px 16px",fontSize:"1rem",fontWeight:700,color:"#3be8b0",letterSpacing:"0.1em"}}>{code}</code>
-                <button onClick={()=>{navigator.clipboard?.writeText("https://alphaomegatides.com?ref="+code);}} style={{background:"#3be8b0",color:"#0e0e0e",border:"none",borderRadius:100,padding:"8px 16px",fontFamily:"inherit",fontWeight:700,fontSize:"0.82rem",cursor:"pointer"}}>Copy Link</button>
-              </div>
-              <p style={{fontSize:"0.8rem",color:C.muted,margin:"10px 0 0"}}>Share your code. You earn 500 pts per referral order. They earn 200 pts on first order.</p>
-            </div>
-            <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:16,padding:"20px"}}>
-              <div style={{fontWeight:700,fontSize:"0.9rem",marginBottom:12}}>How to Earn</div>
-              {[["🛒","Every Purchase","10 pts per $1 spent"],["🎁","Refer a Researcher","500 pts when they order"],["📝","Write a Review","50 pts per review"],["✅","Complete Profile","100 pts one-time"],].map(([icon,title,desc])=>(
-                <div key={title} style={{display:"flex",gap:12,alignItems:"center",marginBottom:10}}>
-                  <span style={{fontSize:"1.1rem"}}>{icon}</span>
-                  <div><div style={{fontWeight:600,fontSize:"0.85rem"}}>{title}</div><div style={{fontSize:"0.78rem",color:C.muted}}>{desc}</div></div>
-                </div>
-              ))}
-            </div>
-          </div>;
-        })()}
-      </div>}
+      {tab==="waitlist"&&isAdmin(user)&&<WaitlistAdmin/>}
+      {tab==="signups"&&isAdmin(user)&&<AllSignupsAdmin/>}
+      {tab==="flash"&&isAdmin(user)&&<FlashSaleAdmin/>}
+      {tab==="loyalty"&&<div style={{color:C.muted,padding:20}}>Coming soon</div>}
+      
       {tab==="coa"&&<div>
         <div style={{fontFamily:"'Syne',sans-serif",fontSize:"1.2rem",fontWeight:700,marginBottom:5}}>Certificates of Analysis</div>
         <div style={{fontSize:"0.83rem",color:C.muted,marginBottom:24}}>Third-party lab certifications for all Alphaomegatides compounds. Independently tested by Freedom Diagnostics.</div>
@@ -3545,7 +3720,7 @@ function SiteFooter({go}){
         </div>
         <div>
           <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,color:"rgba(255,255,255,0.7)",fontSize:"0.8rem",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:14}}>Company</div>
-          {[["Contact",()=>go("contact")],["COA Library",()=>go("coa")],["Research Stacks",()=>go("bundles")],["Find My Compound",()=>go("quiz")],["Protocol Guides",()=>go("protocols")],["Track Order",()=>go("track")],["Sign In",()=>go("login")]].map(([l,fn])=>(
+          {[["Contact",()=>go("contact")],["Community Chat",()=>go("chat")],["COA Library",()=>go("coa")],["Research Stacks",()=>go("bundles")],["Find My Compound",()=>go("quiz")],["Protocol Guides",()=>go("protocols")],["Track Order",()=>go("track")],["Sign In",()=>go("login")]].map(([l,fn])=>(
             <div key={l} onClick={fn} style={{cursor:"pointer",marginBottom:9,color:"rgba(255,255,255,0.4)",fontSize:"0.8rem",transition:"color .2s"}} onMouseEnter={e=>e.target.style.color="#fff"} onMouseLeave={e=>e.target.style.color="rgba(255,255,255,0.4)"}>{l}</div>
           ))}
         </div>
@@ -3761,80 +3936,6 @@ function PageProgressBar() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// AFFILIATE / REFERRAL TRACKING
-// ═══════════════════════════════════════════════════════════════
-function initAffiliateTracking() {
-  try {
-    const params = new URLSearchParams(window.location.search);
-    const ref = params.get("ref") || params.get("aff") || params.get("utm_source");
-    if (ref) {
-      localStorage.setItem("aot_ref", ref);
-      localStorage.setItem("aot_ref_ts", Date.now().toString());
-    }
-  } catch {}
-}
-initAffiliateTracking();
-
-function getAffiliateRef(): string { try { return localStorage.getItem("aot_ref") || ""; } catch { return ""; } }
-
-function AffiliateAdminPanel() {
-  const [codes, setCodes] = useState<Record<string,{clicks:number,signups:number}>>({});
-  const [newCode, setNewCode] = useState("");
-  const [newLink, setNewLink] = useState("");
-
-  useEffect(() => {
-    try { setCodes(JSON.parse(localStorage.getItem("aot_aff_stats") || "{}")); } catch {}
-  }, []);
-
-  const createLink = () => {
-    if (!newCode.trim()) return;
-    const url = `https://alphaomegatides.com?ref=${newCode.trim().toLowerCase()}`;
-    setNewLink(url);
-    const stats = { ...codes, [newCode.trim().toLowerCase()]: { clicks: 0, signups: 0 } };
-    setCodes(stats);
-    localStorage.setItem("aot_aff_stats", JSON.stringify(stats));
-  };
-
-  return (
-    <div>
-      <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1.1rem",marginBottom:4}}>Affiliate Links</div>
-      <div style={{fontSize:"0.82rem",color:"rgba(255,255,255,0.4)",marginBottom:20}}>Create referral links and track signups</div>
-      <div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap"}}>
-        <input value={newCode} onChange={e=>setNewCode(e.target.value)} placeholder="e.g. drsmith, labgroup, podcast1"
-          style={{flex:1,minWidth:160,background:"#1c1c1c",border:"1px solid rgba(255,255,255,0.12)",borderRadius:9,padding:"10px 12px",color:"#fff",fontFamily:"inherit",fontSize:"0.88rem",outline:"none"}}/>
-        <button onClick={createLink} style={{background:"#3be8b0",color:"#0e0e0e",border:"none",padding:"10px 20px",borderRadius:9,cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:"0.85rem"}}>Generate Link</button>
-      </div>
-      {newLink && (
-        <div style={{background:"rgba(59,232,176,0.08)",border:"1px solid rgba(59,232,176,0.2)",borderRadius:12,padding:"14px 16px",marginBottom:16}}>
-          <div style={{fontSize:"0.72rem",fontWeight:700,color:"#3be8b0",marginBottom:6}}>YOUR AFFILIATE LINK</div>
-          <div style={{fontSize:"0.85rem",color:"#fff",wordBreak:"break-all",marginBottom:8}}>{newLink}</div>
-          <button onClick={()=>navigator.clipboard?.writeText(newLink)} style={{background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.12)",color:"rgba(255,255,255,0.7)",padding:"6px 14px",borderRadius:100,cursor:"pointer",fontFamily:"inherit",fontSize:"0.75rem"}}>Copy Link</button>
-        </div>
-      )}
-      {Object.keys(codes).length > 0 && (
-        <div style={{display:"flex",flexDirection:"column",gap:8}}>
-          {Object.entries(codes).map(([code, stats]) => (
-            <div key={code} style={{background:"#1c1c1c",borderRadius:12,padding:"12px 16px",border:"1px solid rgba(255,255,255,0.07)",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
-              <div>
-                <div style={{fontWeight:600,fontSize:"0.85rem"}}>?ref={code}</div>
-                <div style={{fontSize:"0.72rem",color:"rgba(255,255,255,0.35)",marginTop:2}}>alphaomegatides.com?ref={code}</div>
-              </div>
-              <div style={{display:"flex",gap:16}}>
-                <div style={{textAlign:"center"}}><div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1.1rem"}}>{stats.clicks}</div><div style={{fontSize:"0.65rem",color:"rgba(255,255,255,0.35)"}}>CLICKS</div></div>
-                <div style={{textAlign:"center"}}><div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1.1rem",color:"#3be8b0"}}>{stats.signups}</div><div style={{fontSize:"0.65rem",color:"rgba(255,255,255,0.35)"}}>SIGNUPS</div></div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════
-// ORDER TRACKING PAGE (polished UI for showing order status)
-// ═══════════════════════════════════════════════════════════════
-const ORDER_STAGES = ["Order Placed","Processing","Quality Check","Shipped","Delivered"];
 
 function OrderTrackingPage({go}: {go:(p:string,id?:string)=>void}) {
   const [orderId, setOrderId] = useState("");
@@ -5288,21 +5389,15 @@ function CartPage({cart,go,onRemove,onCheckout,onAddToCart}){
             </div>
             <div style={{display:"flex",justifyContent:"space-between",fontSize:"0.82rem",marginTop:6,paddingTop:6,borderTop:"1px solid rgba(59,232,176,0.1)"}}>
               <span style={{color:"rgba(59,232,176,0.7)"}}>⭐ Points you'll earn</span>
-              <span style={{color:"#3be8b0",fontWeight:700}}>+{Math.floor(total*POINTS_PER_DOLLAR)} pts</span>
+              <span style={{color:"#3be8b0",fontWeight:700}}>+ pts</span>
             </div>
           </div>
 
           {/* Referral code at checkout */}
           {(()=>{
-            const [refCode,setRefCode]=React.useState("");
-            const [refApplied,setRefApplied]=React.useState(false);
+
             return <div style={{marginBottom:12}}>
-              {!refApplied?<div style={{display:"flex",gap:8}}>
-                <input value={refCode} onChange={e=>setRefCode(e.target.value)} placeholder="Referral code (optional)"
-                  style={{flex:1,background:"#1a1a1a",border:"1px solid rgba(255,255,255,0.1)",borderRadius:8,padding:"8px 12px",color:"#fff",fontFamily:"inherit",fontSize:"0.82rem"}}/>
-                <button onClick={()=>{if(checkReferralCode(refCode.toUpperCase())){setRefApplied(true);}}}
-                  style={{background:"transparent",color:"#3be8b0",border:"1px solid rgba(59,232,176,0.3)",borderRadius:8,padding:"8px 14px",fontFamily:"inherit",fontSize:"0.82rem",cursor:"pointer"}}>Apply</button>
-              </div>:<div style={{background:"rgba(59,232,176,0.08)",border:"1px solid rgba(59,232,176,0.2)",borderRadius:8,padding:"8px 12px",fontSize:"0.8rem",color:"#3be8b0"}}>✓ Referral code applied · +200 pts on first order</div>}
+              
             </div>;
           })()}
           <PaymentOptions total={total} cartItems={cart}/>
@@ -6001,206 +6096,574 @@ function StackCheckerPage({go}:{go:Function}){
 // ══════════════════════════════════════════════════════════════════
 // LOYALTY PAGE (standalone)
 // ══════════════════════════════════════════════════════════════════
-function LoyaltyPage({go,user}:{go:Function,user:any}){
-  const {dark}=useDarkMode();
-  const card=dark?"#141414":"#ffffff";
-  const muted=dark?"rgba(255,255,255,0.5)":"rgba(0,0,0,0.45)";
-  const pts=user?getPoints(user.email||""):0;
-  const dollars=(pts/POINTS_REDEEM_RATE).toFixed(2);
 
-  const tiers=[
-    {name:"Researcher",min:0,max:499,color:"#888",icon:"🔬",perks:["10 pts per $1 spent","Access to Research Journal","Stack Checker tool"]},
-    {name:"Associate",min:500,max:1999,color:"#3be8b0",icon:"⭐",perks:["12 pts per $1 spent","Early access to new compounds","Priority support"]},
-    {name:"Senior Researcher",min:2000,max:4999,color:"#a855f7",icon:"🏆",perks:["15 pts per $1 spent","Free shipping on all orders","Exclusive batch notifications"]},
-    {name:"Principal Investigator",min:5000,max:Infinity,color:"#ff6b6b",icon:"👑",perks:["20 pts per $1 spent","VIP compound access","Dedicated account manager"]},
-  ];
-  const currentTier=tiers.find(t=>pts>=t.min&&pts<=t.max)||tiers[0];
-  const nextTier=tiers[tiers.indexOf(currentTier)+1];
-  const progress=nextTier?Math.round(((pts-currentTier.min)/(nextTier.min-currentTier.min))*100):100;
 
-  return <div style={{maxWidth:780,margin:"0 auto",padding:"24px 20px 80px"}}>
-    <div style={{textAlign:"center",marginBottom:36}}>
-      <h1 style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"clamp(1.6rem,4vw,2.2rem)",margin:"0 0 8px"}}>Loyalty Rewards</h1>
-      <p style={{color:muted,fontSize:"0.9rem"}}>Earn points on every order. Redeem for discounts. Never expires.</p>
-    </div>
+// ═══════════════════════════════════════════════════════════════
+// MEMBER COMMUNITY CHAT — Firebase Realtime Database (live, multi-device)
+// ═══════════════════════════════════════════════════════════════
+// Firebase config — add your project values here
+const FB_CONFIG = {
+  databaseURL: "https://alphaomegatides-chat-default-rtdb.firebaseio.com",
+};
+const FB_CHAT_PATH = "/chat/messages";
+const FB_URL = (path:string) => `${FB_CONFIG.databaseURL}${path}.json`;
 
-    {!user?<div style={{background:card,borderRadius:20,padding:"40px",textAlign:"center",boxShadow:"0 4px 20px rgba(0,0,0,0.1)"}}>
-      <div style={{fontSize:"2.5rem",marginBottom:12}}>⭐</div>
-      <h3 style={{fontFamily:"'Syne',sans-serif",fontWeight:700,margin:"0 0 8px"}}>Sign in to view your rewards</h3>
-      <p style={{color:muted,fontSize:"0.88rem",marginBottom:20}}>Create a free account to start earning points on every order.</p>
-      <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap" as const}}>
-        <button onClick={()=>go("login")} style={{background:"#3be8b0",color:"#0e0e0e",border:"none",borderRadius:100,padding:"11px 24px",fontFamily:"inherit",fontWeight:700,fontSize:"0.9rem",cursor:"pointer"}}>Sign In</button>
-        <button onClick={()=>go("register")} style={{background:"transparent",color:"#3be8b0",border:"1.5px solid rgba(59,232,176,0.4)",borderRadius:100,padding:"11px 24px",fontFamily:"inherit",fontWeight:700,fontSize:"0.9rem",cursor:"pointer"}}>Create Account</button>
-      </div>
-    </div>:<div>
-      {/* Points balance card */}
-      <div style={{background:"linear-gradient(135deg,rgba(59,232,176,0.1),rgba(168,85,247,0.08))",border:"1px solid rgba(59,232,176,0.2)",borderRadius:20,padding:"28px",marginBottom:20,textAlign:"center"}}>
-        <div style={{fontSize:"0.8rem",color:"#3be8b0",fontWeight:700,letterSpacing:"0.1em",marginBottom:8}}>YOUR BALANCE</div>
-        <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"3.5rem",color:"#3be8b0",marginBottom:4}}>{pts.toLocaleString()}</div>
-        <div style={{color:muted,fontSize:"0.88rem"}}>points · ≈ <strong style={{color:dark?"#fff":"#111"}}>${dollars}</strong> in rewards</div>
-        {pts>=100&&<button style={{marginTop:16,background:"#3be8b0",color:"#0e0e0e",border:"none",borderRadius:100,padding:"10px 24px",fontFamily:"inherit",fontWeight:700,fontSize:"0.88rem",cursor:"pointer"}} onClick={()=>go("shop")}>Redeem at Checkout →</button>}
-      </div>
-
-      {/* Tier progress */}
-      <div style={{background:card,borderRadius:20,padding:"24px",marginBottom:20,boxShadow:"0 2px 12px rgba(0,0,0,0.08)"}}>
-        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
-          <span style={{fontSize:"1.4rem"}}>{currentTier.icon}</span>
-          <div>
-            <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"1rem",color:currentTier.color}}>{currentTier.name}</div>
-            <div style={{fontSize:"0.78rem",color:muted}}>{pts.toLocaleString()} pts earned total</div>
-          </div>
-          {nextTier&&<div style={{marginLeft:"auto",textAlign:"right"}}>
-            <div style={{fontSize:"0.78rem",color:muted}}>Next tier</div>
-            <div style={{fontWeight:700,fontSize:"0.85rem",color:nextTier.color}}>{nextTier.name}</div>
-            <div style={{fontSize:"0.75rem",color:muted}}>{(nextTier.min-pts).toLocaleString()} pts away</div>
-          </div>}
-        </div>
-        {nextTier&&<div>
-          <div style={{background:dark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.08)",borderRadius:100,height:8,overflow:"hidden"}}>
-            <div style={{width:`${progress}%`,height:"100%",background:`linear-gradient(90deg,${currentTier.color},${nextTier.color})`,borderRadius:100,transition:"width .5s"}}/>
-          </div>
-          <div style={{display:"flex",justifyContent:"space-between",fontSize:"0.75rem",color:muted,marginTop:4}}>
-            <span>{currentTier.min.toLocaleString()}</span><span>{nextTier.min.toLocaleString()}</span>
-          </div>
-        </div>}
-      </div>
-    </div>}
-
-    {/* Tiers grid */}
-    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:14,marginBottom:24}}>
-      {tiers.map(t=>(
-        <div key={t.name} style={{background:card,borderRadius:16,padding:"18px",border:`2px solid ${user&&pts>=t.min&&pts<=t.max?t.color:"transparent"}`,boxShadow:"0 2px 10px rgba(0,0,0,0.08)",position:"relative" as const}}>
-          {user&&pts>=t.min&&pts<=t.max&&<span style={{position:"absolute",top:-8,right:12,background:t.color,color:"#0e0e0e",borderRadius:100,padding:"2px 10px",fontSize:"0.7rem",fontWeight:700}}>CURRENT</span>}
-          <div style={{fontSize:"1.4rem",marginBottom:8}}>{t.icon}</div>
-          <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,color:t.color,marginBottom:6}}>{t.name}</div>
-          <div style={{fontSize:"0.75rem",color:muted,marginBottom:10}}>{t.min.toLocaleString()}+ pts</div>
-          {t.perks.map(p=><div key={p} style={{fontSize:"0.78rem",color:muted,marginBottom:4}}>✓ {p}</div>)}
-        </div>
-      ))}
-    </div>
-
-    {/* Earn points guide */}
-    <div style={{background:card,borderRadius:20,padding:"24px",boxShadow:"0 2px 12px rgba(0,0,0,0.08)"}}>
-      <h3 style={{fontFamily:"'Syne',sans-serif",fontWeight:700,margin:"0 0 16px"}}>Ways to Earn</h3>
-      {[["🛒","Purchase","10 pts per $1 · Up to 20 pts/$ at top tier"],["🎁","Refer a Researcher","500 pts when they place first order"],["📝","Leave a Review","50 pts per approved review"],["✅","Complete Your Profile","100 pts one-time bonus"],["🔬","Share Research","Coming soon — share journal findings"],].map(([icon,title,desc])=>(
-        <div key={title} style={{display:"flex",gap:14,alignItems:"flex-start",padding:"12px 0",borderBottom:"1px solid rgba(128,128,128,0.1)"}}>
-          <span style={{fontSize:"1.2rem",marginTop:1}}>{icon}</span>
-          <div><div style={{fontWeight:700,fontSize:"0.9rem",marginBottom:2}}>{title}</div><div style={{fontSize:"0.82rem",color:muted}}>{desc}</div></div>
-        </div>
-      ))}
-    </div>
-  </div>;
+interface ChatMessage {
+  id?: string;
+  userEmail: string;
+  userName: string;
+  isAdmin: boolean;
+  text: string;
+  imageData?: string;
+  fileName?: string;
+  fileData?: string;
+  fileType?: string;
+  timestamp: number;
 }
 
-// ══════════════════════════════════════════════════════════════════
-// REFERRAL PAGE
-// ══════════════════════════════════════════════════════════════════
-function ReferralPage({go,user}:{go:Function,user:any}){
-  const {dark}=useDarkMode();
-  const card=dark?"#141414":"#ffffff";
-  const muted=dark?"rgba(255,255,255,0.5)":"rgba(0,0,0,0.45)";
-  const [copied,setCopied]=React.useState(false);
-  const [refInput,setRefInput]=React.useState("");
-  const [refMsg,setRefMsg]=React.useState("");
+async function fbPostMessage(msg: Omit<ChatMessage,"id">): Promise<void> {
+  try {
+    await fetch(FB_URL(FB_CHAT_PATH), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(msg),
+    });
+  } catch(e) { console.error("Chat post failed:", e); }
+}
 
-  const code=user?getReferralCode(user.email||""):"";
-  const link=`https://alphaomegatides.com?ref=${code}`;
+async function fbGetMessages(): Promise<ChatMessage[]> {
+  try {
+    const res = await fetch(FB_URL(FB_CHAT_PATH) + '?orderBy="timestamp"&limitToLast=200');
+    const data = await res.json();
+    if (!data) return [];
+    return Object.entries(data).map(([id, val]:any) => ({ ...val, id }))
+      .sort((a,b) => a.timestamp - b.timestamp);
+  } catch { return []; }
+}
 
-  function copy(){
-    navigator.clipboard?.writeText(link).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});
-  }
-  function applyRef(){
-    if(!refInput.trim()){setRefMsg("Please enter a referral code.");return;}
-    if(!checkReferralCode(refInput.trim().toUpperCase())){setRefMsg("Invalid code format. Codes look like: AO-XXXXXXXX");return;}
-    if(user&&getReferralCode(user.email||"")===refInput.trim().toUpperCase()){setRefMsg("You can't use your own referral code.");return;}
-    trackReferral(refInput.trim().toUpperCase());
-    setRefMsg("✅ Referral code applied! You'll receive 200 bonus points on your first order.");
-    if(user) addPoints(user.email||"",20); // 200pts = 20 "dollars" equivalent
-  }
+async function fbDeleteMessage(id: string): Promise<void> {
+  try {
+    await fetch(`${FB_CONFIG.databaseURL}${FB_CHAT_PATH}/${id}.json`, { method: "DELETE" });
+  } catch {}
+}
 
-  return <div style={{maxWidth:700,margin:"0 auto",padding:"24px 20px 80px"}}>
-    <div style={{textAlign:"center",marginBottom:32}}>
-      <h1 style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"clamp(1.6rem,4vw,2.2rem)",margin:"0 0 8px"}}>Refer & Earn</h1>
-      <p style={{color:muted,fontSize:"0.9rem"}}>Share Alphaomegatides with fellow researchers. Both of you earn rewards.</p>
+function MemberChatPage({go, user}: {go: Function; user: any}) {
+  const [messages, setMessages]     = useState<ChatMessage[]>([]);
+  const [text, setText]             = useState("");
+  const [loading, setLoading]       = useState(true);
+  const [sending, setSending]       = useState(false);
+  const [imagePreview, setImgPrev]  = useState<string|null>(null);
+  const [imageData, setImgData]     = useState<string|null>(null);
+  const [fileInfo, setFileInfo]     = useState<{name:string;data:string;type:string}|null>(null);
+  const [deletingId, setDeletingId] = useState<string|null>(null);
+  const bottomRef    = useRef<HTMLDivElement>(null);
+  const inputRef     = useRef<HTMLTextAreaElement>(null);
+  const imgInputRef  = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const lastCount    = useRef(0);
+  const pollerRef    = useRef<any>(null);
+
+  const accentG = "#3be8b0";
+  const accentR = "#ff6b6b";
+  const bg      = "#0e0e0e";
+  const card2   = "#242424";
+  const muted   = "rgba(255,255,255,0.38)";
+  const myBubble    = "linear-gradient(135deg,#1a3a2a,#1e4a34)";
+  const theirBubble = card2;
+
+  const loadMessages = async (scrollToBottom=false) => {
+    const msgs = await fbGetMessages();
+    if (msgs.length !== lastCount.current || scrollToBottom) {
+      setMessages(msgs);
+      lastCount.current = msgs.length;
+      if (scrollToBottom || msgs.length !== lastCount.current) {
+        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 80);
+      }
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    loadMessages(true);
+    pollerRef.current = setInterval(() => loadMessages(false), 3000);
+    return () => clearInterval(pollerRef.current);
+  }, []);
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { alert("Images must be under 2MB."); e.target.value=""; return; }
+    const reader = new FileReader();
+    reader.onload = () => { const r=reader.result as string; setImgData(r); setImgPrev(r); };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 4 * 1024 * 1024) { alert("Files must be under 4MB."); e.target.value=""; return; }
+    const reader = new FileReader();
+    reader.onload = () => setFileInfo({ name: file.name, data: reader.result as string, type: file.type });
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const clearAttachments = () => { setImgData(null); setImgPrev(null); setFileInfo(null); };
+
+  const handleSend = async () => {
+    if ((!text.trim() && !imageData && !fileInfo) || sending) return;
+    setSending(true);
+    const msg: Omit<ChatMessage,"id"> = {
+      userEmail: user.email || "",
+      userName: user.name || user.email?.split("@")[0] || "Member",
+      isAdmin: isAdmin(user),
+      text: text.trim(),
+      timestamp: Date.now(),
+      ...(imageData ? { imageData } : {}),
+      ...(fileInfo ? { fileName: fileInfo.name, fileData: fileInfo.data, fileType: fileInfo.type } : {}),
+    };
+    await fbPostMessage(msg);
+    setText(""); clearAttachments(); setSending(false);
+    await loadMessages(true);
+    setTimeout(() => { inputRef.current?.focus(); }, 50);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm("Delete this message?")) return;
+    setDeletingId(id);
+    await fbDeleteMessage(id);
+    await loadMessages(false);
+    setDeletingId(null);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
+  };
+
+  const formatTime = (ts: number) => new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const formatDate = (ts: number) => {
+    const d = new Date(ts), t = new Date();
+    if (d.toDateString() === t.toDateString()) return "Today";
+    const y = new Date(t); y.setDate(t.getDate()-1);
+    if (d.toDateString() === y.toDateString()) return "Yesterday";
+    return d.toLocaleDateString([], { month: "short", day: "numeric" });
+  };
+
+  const grouped: { date: string; msgs: ChatMessage[] }[] = [];
+  messages.forEach(m => {
+    const label = formatDate(m.timestamp);
+    if (!grouped.length || grouped[grouped.length-1].date !== label)
+      grouped.push({ date: label, msgs: [m] });
+    else grouped[grouped.length-1].msgs.push(m);
+  });
+
+  const isMe = (msg: ChatMessage) => msg.userEmail === user?.email;
+  const initials = (name: string) => name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
+  const avatarColor = (email: string) => {
+    const cols = ["#3be8b0","#ff6b6b","#4f8ef7","#ffd166","#a855f7","#f59e0b"];
+    let h=0; for(const c of email) h=(h*31+c.charCodeAt(0))%cols.length;
+    return cols[Math.abs(h)];
+  };
+
+  if (!user) return (
+    <div style={{minHeight:"100vh",background:bg,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16,padding:40}}>
+      <div style={{fontSize:"2.5rem"}}>💬</div>
+      <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1.4rem",color:"#fff"}}>Members Only</div>
+      <div style={{color:muted,fontSize:"0.9rem",textAlign:"center",maxWidth:280}}>Sign in to access the Alphaomegatides researcher community chat.</div>
+      <button onClick={()=>go("login")} style={{background:accentG,color:"#0e0e0e",border:"none",borderRadius:100,padding:"12px 28px",fontFamily:"inherit",fontWeight:700,fontSize:"0.9rem",cursor:"pointer",marginTop:8}}>Sign In</button>
+      <button onClick={()=>go("register")} style={{background:"transparent",color:muted,border:"1px solid rgba(255,255,255,0.12)",borderRadius:100,padding:"10px 24px",fontFamily:"inherit",fontWeight:600,fontSize:"0.85rem",cursor:"pointer"}}>Create Account</button>
     </div>
+  );
 
-    {!user?<div style={{background:card,borderRadius:20,padding:"40px",textAlign:"center",boxShadow:"0 4px 20px rgba(0,0,0,0.1)",marginBottom:24}}>
-      <div style={{fontSize:"2.5rem",marginBottom:12}}>🎁</div>
-      <h3 style={{fontFamily:"'Syne',sans-serif",fontWeight:700,margin:"0 0 8px"}}>Sign in to get your referral link</h3>
-      <p style={{color:muted,fontSize:"0.88rem",marginBottom:20}}>Create a free account to generate your unique referral code.</p>
-      <button onClick={()=>go("login")} style={{background:"#3be8b0",color:"#0e0e0e",border:"none",borderRadius:100,padding:"11px 24px",fontFamily:"inherit",fontWeight:700,cursor:"pointer"}}>Sign In</button>
-    </div>:<div>
-      {/* Your referral link */}
-      <div style={{background:card,borderRadius:20,padding:"28px",marginBottom:20,boxShadow:"0 2px 12px rgba(0,0,0,0.08)"}}>
-        <h3 style={{fontFamily:"'Syne',sans-serif",fontWeight:700,margin:"0 0 16px"}}>Your Referral Link</h3>
-        <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap" as const,marginBottom:12}}>
-          <code style={{flex:1,background:dark?"#1a1a1a":"#f0f0f0",borderRadius:10,padding:"10px 14px",fontSize:"0.85rem",color:dark?"#3be8b0":"#0a6649",wordBreak:"break-all" as const}}>{link}</code>
-          <button onClick={copy} style={{background:copied?"#3be8b0":"transparent",color:copied?"#0e0e0e":"#3be8b0",border:"1.5px solid rgba(59,232,176,0.4)",borderRadius:100,padding:"10px 18px",fontFamily:"inherit",fontWeight:700,fontSize:"0.85rem",cursor:"pointer",whiteSpace:"nowrap" as const,transition:"all .2s"}}>
-            {copied?"✓ Copied!":"Copy Link"}
+  return (
+    <div style={{background:bg,minHeight:"100vh",display:"flex",flexDirection:"column",paddingTop:60}}>
+      {/* HEADER */}
+      <div style={{background:"#111",borderBottom:"1px solid rgba(255,255,255,0.08)",padding:"14px 20px",display:"flex",alignItems:"center",gap:12,position:"sticky",top:60,zIndex:10}}>
+        <div style={{width:38,height:38,borderRadius:"50%",background:"linear-gradient(135deg,#3be8b0,#4f8ef7)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.1rem",flexShrink:0}}>🔬</div>
+        <div>
+          <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1rem",color:"#fff"}}>Researcher Community</div>
+          <div style={{fontSize:"0.72rem",color:accentG,display:"flex",alignItems:"center",gap:5}}>
+            <span style={{width:6,height:6,borderRadius:"50%",background:accentG,display:"inline-block",animation:"chatpulse 2s infinite"}}/>
+            Live · {messages.length} message{messages.length!==1?"s":""}
+          </div>
+        </div>
+        <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:10}}>
+          <button onClick={()=>loadMessages(true)} style={{background:"rgba(59,232,176,0.1)",border:"1px solid rgba(59,232,176,0.2)",color:accentG,borderRadius:8,padding:"5px 12px",cursor:"pointer",fontSize:"0.72rem",fontWeight:700}}>↻ Refresh</button>
+          <div style={{fontSize:"0.72rem",color:muted}}>Members only</div>
+        </div>
+      </div>
+
+      {/* DISCLAIMER */}
+      <div style={{background:"rgba(255,107,107,0.07)",borderBottom:"1px solid rgba(255,107,107,0.15)",padding:"8px 20px",fontSize:"0.7rem",color:"rgba(255,107,107,0.8)",textAlign:"center"}}>
+        ⚠️ Research discussion only · No medical advice · All products for in-vitro research use only
+      </div>
+
+      {/* MESSAGES */}
+      <div style={{flex:1,overflowY:"auto",padding:"16px 12px",display:"flex",flexDirection:"column",gap:2,maxWidth:760,width:"100%",margin:"0 auto",boxSizing:"border-box" as const}}>
+        {loading && (
+          <div style={{textAlign:"center",color:muted,padding:"60px 20px"}}>
+            <div style={{fontSize:"1.5rem",marginBottom:8,animation:"chatpulse 1.5s infinite"}}>💬</div>
+            <div style={{fontSize:"0.85rem"}}>Loading messages…</div>
+          </div>
+        )}
+        {!loading && messages.length === 0 && (
+          <div style={{textAlign:"center",color:muted,padding:"60px 20px"}}>
+            <div style={{fontSize:"2.5rem",marginBottom:12}}>👋</div>
+            <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"1.1rem",color:"rgba(255,255,255,0.6)",marginBottom:6}}>Welcome to the community</div>
+            <div style={{fontSize:"0.85rem"}}>Be the first to post. Research discussions, questions, and updates welcome.</div>
+          </div>
+        )}
+
+        {grouped.map((group, gi) => (
+          <div key={gi}>
+            <div style={{display:"flex",alignItems:"center",gap:10,margin:"16px 0 10px",color:muted,fontSize:"0.7rem"}}>
+              <div style={{flex:1,height:1,background:"rgba(255,255,255,0.07)"}}/>
+              <div style={{background:"#1c1c1c",border:"1px solid rgba(255,255,255,0.1)",borderRadius:100,padding:"2px 12px"}}>{group.date}</div>
+              <div style={{flex:1,height:1,background:"rgba(255,255,255,0.07)"}}/>
+            </div>
+
+            {group.msgs.map((msg, mi) => {
+              const mine = isMe(msg);
+              const prev = mi > 0 ? group.msgs[mi-1] : null;
+              const sameAuthor = prev?.userEmail === msg.userEmail;
+              const canDelete = isAdmin(user) || mine;
+
+              return (
+                <div key={msg.id||mi} style={{display:"flex",flexDirection:mine?"row-reverse":"row",alignItems:"flex-end",gap:8,marginBottom:sameAuthor?2:8,marginTop:!mine&&!sameAuthor?6:0}}>
+                  {!mine && (
+                    <div style={{width:32,height:32,flexShrink:0,borderRadius:"50%",
+                      background:msg.isAdmin?"#ff6b6b":avatarColor(msg.userEmail),
+                      display:"flex",alignItems:"center",justifyContent:"center",
+                      fontSize:"0.65rem",fontWeight:700,color:"#0e0e0e",
+                      opacity:!sameAuthor?1:0}}>
+                      {msg.isAdmin?"👑":initials(msg.userName)}
+                    </div>
+                  )}
+
+                  <div style={{maxWidth:"72%",minWidth:60,position:"relative" as const}} className="chat-bubble-wrap">
+                    {!mine && !sameAuthor && (
+                      <div style={{fontSize:"0.7rem",fontWeight:700,marginBottom:3,paddingLeft:4,
+                        color:msg.isAdmin?"#ff6b6b":avatarColor(msg.userEmail),display:"flex",alignItems:"center",gap:6}}>
+                        {msg.userName}
+                        {msg.isAdmin && <span style={{background:"#ff6b6b",color:"#fff",fontSize:"0.6rem",fontWeight:800,padding:"1px 7px",borderRadius:100}}>ADMIN</span>}
+                      </div>
+                    )}
+
+                    <div style={{
+                      background:mine?myBubble:theirBubble,
+                      border:mine?"1px solid rgba(59,232,176,0.2)":"1px solid rgba(255,255,255,0.07)",
+                      borderRadius:mine?(sameAuthor?"16px 4px 4px 16px":"16px 4px 16px 16px"):(sameAuthor?"4px 16px 16px 4px":"4px 16px 16px 16px"),
+                      padding:"10px 13px",
+                    }}>
+                      {msg.imageData && (
+                        <div style={{marginBottom:msg.text?8:0}}>
+                          <img src={msg.imageData} alt="shared"
+                            style={{maxWidth:"100%",maxHeight:280,borderRadius:10,display:"block",cursor:"pointer"}}
+                            onClick={()=>window.open(msg.imageData,"_blank")}/>
+                        </div>
+                      )}
+                      {msg.fileName && (
+                        <a href={msg.fileData} download={msg.fileName}
+                          style={{display:"flex",alignItems:"center",gap:8,background:"rgba(255,255,255,0.06)",
+                            border:"1px solid rgba(255,255,255,0.1)",borderRadius:10,padding:"8px 12px",
+                            marginBottom:msg.text?8:0,textDecoration:"none",cursor:"pointer"}}>
+                          <span style={{fontSize:"1.4rem"}}>
+                            {msg.fileType?.includes("pdf")?"📄":msg.fileType?.includes("image")?"🖼️":"📎"}
+                          </span>
+                          <div>
+                            <div style={{fontSize:"0.78rem",fontWeight:600,color:"#fff",maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{msg.fileName}</div>
+                            <div style={{fontSize:"0.65rem",color:muted}}>Tap to download</div>
+                          </div>
+                        </a>
+                      )}
+                      {msg.text && (
+                        <div style={{fontSize:"0.88rem",color:"#f0f0f0",lineHeight:1.5,wordBreak:"break-word" as const,whiteSpace:"pre-wrap" as const}}>
+                          {msg.text}
+                        </div>
+                      )}
+                      <div style={{display:"flex",alignItems:"center",justifyContent:mine?"flex-end":"flex-start",gap:8,marginTop:4}}>
+                        <div style={{fontSize:"0.62rem",color:muted}}>{formatTime(msg.timestamp)}</div>
+                        {canDelete && msg.id && (
+                          <button onClick={()=>handleDelete(msg.id!)}
+                            disabled={deletingId===msg.id}
+                            style={{background:"none",border:"none",color:"rgba(255,107,107,0.4)",cursor:"pointer",fontSize:"0.6rem",padding:"0 2px",lineHeight:1}}>
+                            {deletingId===msg.id?"…":"🗑"}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ))}
+        <div ref={bottomRef}/>
+      </div>
+
+      {/* ATTACHMENT PREVIEW */}
+      {(imagePreview || fileInfo) && (
+        <div style={{background:"#111",borderTop:"1px solid rgba(255,255,255,0.08)",padding:"10px 16px",display:"flex",alignItems:"center",gap:10,maxWidth:760,width:"100%",margin:"0 auto",boxSizing:"border-box" as const}}>
+          {imagePreview && <img src={imagePreview} alt="preview" style={{height:52,width:52,objectFit:"cover",borderRadius:8,border:"1px solid rgba(255,255,255,0.12)"}}/>}
+          {fileInfo && (
+            <div style={{display:"flex",alignItems:"center",gap:8,background:"rgba(255,255,255,0.05)",borderRadius:8,padding:"6px 12px",border:"1px solid rgba(255,255,255,0.1)"}}>
+              <span>📎</span>
+              <span style={{fontSize:"0.78rem",color:"#ccc",maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{fileInfo.name}</span>
+            </div>
+          )}
+          <button onClick={clearAttachments} style={{marginLeft:"auto",background:"rgba(255,107,107,0.15)",border:"1px solid rgba(255,107,107,0.3)",color:accentR,borderRadius:"50%",width:26,height:26,cursor:"pointer",fontSize:"0.8rem",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+        </div>
+      )}
+
+      {/* INPUT BAR */}
+      <div style={{background:"#111",borderTop:"1px solid rgba(255,255,255,0.08)",padding:"10px 12px",position:"sticky",bottom:0,zIndex:10}}>
+        <div style={{maxWidth:760,margin:"0 auto",display:"flex",alignItems:"flex-end",gap:8}}>
+          <input ref={imgInputRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleImageSelect}/>
+          <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx,.txt,.csv,.xlsx,.pptx" style={{display:"none"}} onChange={handleFileSelect}/>
+          <button onClick={()=>imgInputRef.current?.click()} title="Send image"
+            style={{background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:10,width:40,height:40,cursor:"pointer",fontSize:"1.1rem",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",color:"#ccc"}}>🖼️</button>
+          <button onClick={()=>fileInputRef.current?.click()} title="Send file"
+            style={{background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:10,width:40,height:40,cursor:"pointer",fontSize:"1.1rem",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",color:"#ccc"}}>📎</button>
+          <textarea ref={inputRef} value={text} onChange={e=>setText(e.target.value)} onKeyDown={handleKeyDown}
+            placeholder="Message the community… (Enter to send, Shift+Enter for newline)"
+            rows={1}
+            style={{flex:1,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.12)",
+              borderRadius:12,padding:"10px 14px",color:"#fff",fontFamily:"'DM Sans',sans-serif",
+              fontSize:"0.88rem",resize:"none",outline:"none",lineHeight:1.5,maxHeight:120,overflowY:"auto"}}
+            onInput={e=>{const t=e.target as HTMLTextAreaElement;t.style.height="auto";t.style.height=Math.min(t.scrollHeight,120)+"px";}}/>
+          <button onClick={handleSend} disabled={sending||(!text.trim()&&!imageData&&!fileInfo)}
+            style={{background:(text.trim()||imageData||fileInfo)?accentG:"rgba(255,255,255,0.08)",
+              color:(text.trim()||imageData||fileInfo)?"#0e0e0e":muted,
+              border:"none",borderRadius:10,width:40,height:40,cursor:"pointer",fontSize:"1.1rem",
+              flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s",fontWeight:700}}>
+            {sending?"…":"➤"}
           </button>
         </div>
-        <p style={{color:muted,fontSize:"0.8rem",margin:0}}>Your code: <strong style={{color:"#3be8b0",letterSpacing:"0.08em"}}>{code}</strong></p>
-      </div>
-
-      {/* Rewards breakdown */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:20}}>
-        <div style={{background:card,borderRadius:16,padding:"20px",textAlign:"center",boxShadow:"0 2px 10px rgba(0,0,0,0.08)"}}>
-          <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1.8rem",color:"#3be8b0"}}>500</div>
-          <div style={{fontWeight:700,fontSize:"0.88rem",marginBottom:4}}>Points for You</div>
-          <div style={{color:muted,fontSize:"0.78rem"}}>Per referral who orders</div>
-        </div>
-        <div style={{background:card,borderRadius:16,padding:"20px",textAlign:"center",boxShadow:"0 2px 10px rgba(0,0,0,0.08)"}}>
-          <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1.8rem",color:"#ff6b6b"}}>200</div>
-          <div style={{fontWeight:700,fontSize:"0.88rem",marginBottom:4}}>Points for Them</div>
-          <div style={{color:muted,fontSize:"0.78rem"}}>On their first order</div>
+        <div style={{maxWidth:760,margin:"4px auto 0",paddingLeft:4}}>
+          <span style={{fontSize:"0.65rem",color:muted}}>Logged in as <strong style={{color:"rgba(255,255,255,0.5)"}}>{user.name||user.email}</strong>
+            {isAdmin(user)&&<span style={{marginLeft:6,background:accentR,color:"#fff",fontSize:"0.58rem",fontWeight:800,padding:"1px 7px",borderRadius:100}}>ADMIN</span>}
+          </span>
         </div>
       </div>
-    </div>}
 
-    {/* Apply a referral code */}
-    <div style={{background:card,borderRadius:20,padding:"24px",marginBottom:20,boxShadow:"0 2px 12px rgba(0,0,0,0.08)"}}>
-      <h3 style={{fontFamily:"'Syne',sans-serif",fontWeight:700,margin:"0 0 8px"}}>Have a Referral Code?</h3>
-      <p style={{color:muted,fontSize:"0.82rem",margin:"0 0 16px"}}>Enter a friend's code to earn 200 bonus points on your first order.</p>
-      <div style={{display:"flex",gap:10,flexWrap:"wrap" as const}}>
-        <input value={refInput} onChange={e=>setRefInput(e.target.value)} placeholder="AO-XXXXXXXX"
-          style={{flex:1,background:dark?"#1e1e1e":"#f5f5f5",border:"1px solid rgba(128,128,128,0.2)",borderRadius:10,padding:"10px 14px",color:dark?"#fff":"#111",fontFamily:"inherit",fontSize:"0.92rem"}}/>
-        <button onClick={applyRef} style={{background:"#3be8b0",color:"#0e0e0e",border:"none",borderRadius:100,padding:"10px 20px",fontFamily:"inherit",fontWeight:700,cursor:"pointer"}}>Apply</button>
-      </div>
-      {refMsg&&<p style={{fontSize:"0.82rem",color:refMsg.startsWith("✅")?"#3be8b0":"#ff6b6b",margin:"10px 0 0"}}>{refMsg}</p>}
+      <style>{`
+        @keyframes chatpulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:.5;transform:scale(.8);} }
+      `}</style>
     </div>
-
-    {/* How it works */}
-    <div style={{background:card,borderRadius:20,padding:"24px",boxShadow:"0 2px 12px rgba(0,0,0,0.08)"}}>
-      <h3 style={{fontFamily:"'Syne',sans-serif",fontWeight:700,margin:"0 0 16px"}}>How It Works</h3>
-      {[["1","Share Your Link","Send your unique referral link to fellow researchers via email, forum posts, or direct message."],["2","They Order","When they click your link and place their first order, the referral is tracked automatically."],["3","Both Earn","You receive 500 loyalty points. They receive 200 points. Points are added within 24 hours of order confirmation."],].map(([num,title,desc])=>(
-        <div key={num} style={{display:"flex",gap:16,marginBottom:16,alignItems:"flex-start"}}>
-          <div style={{width:28,height:28,borderRadius:"50%",background:"rgba(59,232,176,0.15)",color:"#3be8b0",fontWeight:800,fontSize:"0.85rem",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{num}</div>
-          <div><div style={{fontWeight:700,fontSize:"0.9rem",marginBottom:3}}>{title}</div><div style={{fontSize:"0.82rem",color:muted,lineHeight:1.5}}>{desc}</div></div>
-        </div>
-      ))}
-    </div>
-  </div>;
+  );
 }
 
-// ══════════════════════════════════════════════════════════════════
-// DOSING CALCULATOR PAGE (research protocol tool)
-// ══════════════════════════════════════════════════════════════════
-const DOSING_DATA:{[key:string]:{unit:string,commonRange:string,reconVol:string,notes:string,researchDoses:{label:string,dose:string}[]}}={
-  "BPC-157":{unit:"mcg",commonRange:"200–500 mcg",reconVol:"Typically reconstituted to 500mcg/mL with BAC water",notes:"Most published rodent studies used IP or SC routes. Oral administration also studied in GI models.",researchDoses:[{label:"Low (rodent study range)",dose:"10–50 mcg/kg"},{label:"Mid (common in literature)",dose:"50–200 mcg/kg"},{label:"High (upper study range)",dose:"200–500 mcg/kg"}]},
-  "TB-500":{unit:"mg",commonRange:"2–5 mg",reconVol:"Typically reconstituted to 1mg/mL with BAC water",notes:"Thymosin beta-4 fragment. Studied primarily in tissue repair models at mg-level doses.",researchDoses:[{label:"Low",dose:"1–2 mg/kg"},{label:"Mid",dose:"2–5 mg/kg"},{label:"High",dose:"5–10 mg/kg"}]},
-  "Semaglutide":{unit:"mg",commonRange:"0.5–2.4 mg",reconVol:"Typically reconstituted to 1mg/mL",notes:"GLP-1 receptor agonist. Long half-life (~7 days) — most rodent studies use once-weekly dosing.",researchDoses:[{label:"Low (rodent studies)",dose:"0.01–0.03 mg/kg"},{label:"Mid",dose:"0.03–0.1 mg/kg"},{label:"High",dose:"0.1–0.3 mg/kg"}]},
-  "Tirzepatide":{unit:"mg",commonRange:"2.5–15 mg",reconVol:"Typically reconstituted to 1mg/mL",notes:"Dual GLP-1/GIP agonist. Half-life ~5 days. Once-weekly in most published studies.",researchDoses:[{label:"Low",dose:"0.01–0.03 mg/kg"},{label:"Mid",dose:"0.03–0.1 mg/kg"},{label:"High",dose:"0.1–0.5 mg/kg"}]},
-  "Retatrutide":{unit:"mg",commonRange:"1–12 mg",reconVol:"Typically reconstituted to 1mg/mL",notes:"Triple agonist (GLP-1/GIP/glucagon). Phase 2 published data. Half-life ~6 days.",researchDoses:[{label:"Low",dose:"0.01–0.05 mg/kg"},{label:"Mid",dose:"0.05–0.2 mg/kg"},{label:"High",dose:"0.2–0.5 mg/kg"}]},
-  "CJC-1295":{unit:"mcg",commonRange:"100–300 mcg",reconVol:"Typically reconstituted to 500mcg/mL",notes:"GHRH analog. Often studied in combination with ipamorelin (2:1 ratio in many protocols).",researchDoses:[{label:"Low",dose:"50–100 mcg/kg"},{label:"Mid",dose:"100–300 mcg/kg"},{label:"High",dose:"300–600 mcg/kg"}]},
-  "Ipamorelin":{unit:"mcg",commonRange:"100–300 mcg",reconVol:"Typically reconstituted to 500mcg/mL",notes:"GH secretagogue / ghrelin mimetic. Selective GH release with minimal cortisol/prolactin effects in studies.",researchDoses:[{label:"Low",dose:"50–100 mcg/kg"},{label:"Mid",dose:"100–300 mcg/kg"},{label:"High",dose:"300–600 mcg/kg"}]},
-  "Sermorelin":{unit:"mcg",commonRange:"200–500 mcg",reconVol:"Typically reconstituted to 500mcg/mL",notes:"GHRH 1-29 fragment. Shorter half-life than CJC-1295 — most studies use more frequent dosing.",researchDoses:[{label:"Low",dose:"0.5–1 mcg/kg"},{label:"Mid",dose:"1–3 mcg/kg"},{label:"High",dose:"3–10 mcg/kg"}]},
-  "Epithalon":{unit:"mg",commonRange:"5–10 mg",reconVol:"Typically reconstituted to 1mg/mL",notes:"Tetrapeptide. Pineal gland / telomere research. Most studies used consecutive-day protocols.",researchDoses:[{label:"Low",dose:"0.1–0.3 mg/kg"},{label:"Mid",dose:"0.3–1 mg/kg"},{label:"High",dose:"1–3 mg/kg"}]},
-  "GHK-Cu":{unit:"mg",commonRange:"1–5 mg",reconVol:"Typically reconstituted to 1mg/mL",notes:"Copper peptide. Studied topically and systemically. Strong collagen synthesis activity in cell culture.",researchDoses:[{label:"Low",dose:"0.1–0.5 mg/kg"},{label:"Mid",dose:"0.5–2 mg/kg"},{label:"High",dose:"2–5 mg/kg"}]},
-  "Selank":{unit:"mcg",commonRange:"250–500 mcg",reconVol:"Typically reconstituted to 300mcg/mL",notes:"Heptapeptide. GABAergic / anxiolytic research. Studied intranasally and via injection in rodent models.",researchDoses:[{label:"Low",dose:"100–300 mcg/kg"},{label:"Mid",dose:"300–600 mcg/kg"},{label:"High",dose:"600–1000 mcg/kg"}]},
-  "Semax":{unit:"mcg",commonRange:"200–600 mcg",reconVol:"Typically reconstituted to 300mcg/mL",notes:"ACTH 4-7 analog. BDNF upregulation in CNS research. Intranasal route commonly used in studies.",researchDoses:[{label:"Low",dose:"25–50 mcg/kg"},{label:"Mid",dose:"50–100 mcg/kg"},{label:"High",dose:"100–300 mcg/kg"}]},
-  "NAD+":{unit:"mg",commonRange:"100–500 mg",reconVol:"Dissolve in sterile saline to desired concentration",notes:"Cellular energy cofactor. IV, IM, and oral routes studied. Rapid degradation — use fresh reconstitution.",researchDoses:[{label:"Low (systemic)",dose:"1–5 mg/kg"},{label:"Mid",dose:"5–20 mg/kg"},{label:"High",dose:"20–50 mg/kg"}]},
-  "IGF-1 LR3":{unit:"mcg",commonRange:"20–100 mcg",reconVol:"Reconstitute in acetic acid (0.1–1%), then dilute in BAC water",notes:"Long-acting IGF-1 variant. Half-life ~20hrs vs 15min native IGF-1. Caution: potent in proliferation models.",researchDoses:[{label:"Low",dose:"5–20 mcg/kg"},{label:"Mid",dose:"20–50 mcg/kg"},{label:"High",dose:"50–100 mcg/kg"}]},
-};
+// ═══════════════════════════════════════════════════════════════
+// FLASH SALE BANNER — admin-controlled, shows sitewide
+// ═══════════════════════════════════════════════════════════════
+const FLASH_KEY = "aot_flash_sale";
+
+interface FlashSale {
+  active: boolean;
+  message: string;
+  discount: string;
+  code: string;
+  endsAt: string; // ISO string or ""
+  color: string;  // "red" | "green" | "gold" | "blue"
+}
+
+function getFlashSale(): FlashSale | null {
+  try {
+    const d = JSON.parse(localStorage.getItem(FLASH_KEY) || "null");
+    if (!d || !d.active) return null;
+    if (d.endsAt && new Date(d.endsAt) < new Date()) return null; // expired
+    return d;
+  } catch { return null; }
+}
+
+function saveFlashSale(sale: FlashSale) {
+  try { localStorage.setItem(FLASH_KEY, JSON.stringify(sale)); } catch {}
+  // Notify other tabs
+  try { localStorage.setItem("aot_flash_ping", String(Date.now())); } catch {}
+}
+
+// The sitewide banner rendered at the top of the page
+function FlashSaleBanner() {
+  const [sale, setSale] = useState<FlashSale|null>(null);
+  const [dismissed, setDismissed] = useState(false);
+  const [timeLeft, setTimeLeft] = useState("");
+
+  const load = () => setSale(getFlashSale());
+
+  useEffect(() => {
+    load();
+    const iv = setInterval(load, 5000);
+    const onStore = (e: StorageEvent) => { if(e.key==="aot_flash_ping") load(); };
+    window.addEventListener("storage", onStore);
+    return () => { clearInterval(iv); window.removeEventListener("storage", onStore); };
+  }, []);
+
+  // Countdown timer
+  useEffect(() => {
+    if (!sale?.endsAt) { setTimeLeft(""); return; }
+    const tick = () => {
+      const diff = new Date(sale.endsAt).getTime() - Date.now();
+      if (diff <= 0) { setTimeLeft(""); load(); return; }
+      const h = Math.floor(diff/3600000);
+      const m = Math.floor((diff%3600000)/60000);
+      const s = Math.floor((diff%60000)/1000);
+      setTimeLeft(h>0 ? `${h}h ${m}m ${s}s` : `${m}m ${s}s`);
+    };
+    tick();
+    const iv = setInterval(tick, 1000);
+    return () => clearInterval(iv);
+  }, [sale?.endsAt]);
+
+  if (!sale || dismissed) return null;
+
+  const colors: Record<string,{bg:string;border:string;text:string;accent:string}> = {
+    red:   {bg:"linear-gradient(90deg,#7f0000,#c0392b,#7f0000)",border:"rgba(255,100,100,0.4)",text:"#fff",accent:"#ffd6d6"},
+    green: {bg:"linear-gradient(90deg,#0a3d1f,#1a7a3a,#0a3d1f)",border:"rgba(59,232,176,0.4)",text:"#fff",accent:"#3be8b0"},
+    gold:  {bg:"linear-gradient(90deg,#5c3a00,#c07800,#5c3a00)",border:"rgba(255,209,102,0.4)",text:"#fff",accent:"#ffd166"},
+    blue:  {bg:"linear-gradient(90deg,#0a1a4a,#1a3a8a,#0a1a4a)",border:"rgba(79,142,247,0.4)",text:"#fff",accent:"#4f8ef7"},
+  };
+  const col = colors[sale.color] || colors.red;
+
+  return (
+    <div style={{
+      background:col.bg,borderBottom:`1px solid ${col.border}`,
+      padding:"10px 16px",display:"flex",alignItems:"center",
+      justifyContent:"center",gap:12,flexWrap:"wrap" as const,
+      position:"relative" as const,zIndex:200,
+    }}>
+      <span style={{fontSize:"1.1rem"}}>⚡</span>
+      <span style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"0.92rem",color:col.text,letterSpacing:"-.01em"}}>
+        {sale.message}
+      </span>
+      {sale.discount && (
+        <span style={{background:col.accent,color:"#0e0e0e",fontWeight:900,fontSize:"0.85rem",padding:"2px 10px",borderRadius:100}}>
+          {sale.discount} OFF
+        </span>
+      )}
+      {sale.code && (
+        <span style={{fontFamily:"monospace",background:"rgba(255,255,255,0.15)",color:col.accent,fontWeight:700,fontSize:"0.82rem",padding:"2px 10px",borderRadius:6,letterSpacing:"0.1em",border:`1px solid ${col.accent}`,cursor:"pointer"}}
+          onClick={()=>{navigator.clipboard?.writeText(sale.code).catch(()=>{}); alert("Code copied: "+sale.code);}}>
+          {sale.code} — tap to copy
+        </span>
+      )}
+      {timeLeft && (
+        <span style={{color:col.accent,fontWeight:700,fontSize:"0.8rem",fontFamily:"monospace"}}>
+          ⏱ {timeLeft}
+        </span>
+      )}
+      <button onClick={()=>setDismissed(true)}
+        style={{position:"absolute" as const,right:12,top:"50%",transform:"translateY(-50%)",
+          background:"rgba(255,255,255,0.15)",border:"none",color:"#fff",
+          borderRadius:"50%",width:22,height:22,cursor:"pointer",fontSize:"0.8rem",
+          display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>✕</button>
+    </div>
+  );
+}
+
+// Admin control panel — appears in dashboard under "Flash Sale" tab
+function FlashSaleAdmin() {
+  const defaultSale: FlashSale = { active:false, message:"🔥 Flash Sale — Limited Time!", discount:"20%", code:"FLASH20", endsAt:"", color:"red" };
+  const [sale, setSaleState] = useState<FlashSale>(() => {
+    try { return JSON.parse(localStorage.getItem(FLASH_KEY)||"null") || defaultSale; } catch { return defaultSale; }
+  });
+  const [saved, setSaved] = useState(false);
+
+  const update = (k: keyof FlashSale, v: any) => setSaleState(p=>({...p,[k]:v}));
+
+  const handleSave = () => {
+    saveFlashSale(sale);
+    setSaved(true);
+    setTimeout(()=>setSaved(false), 2500);
+  };
+
+  const fieldStyle = {
+    width:"100%",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.12)",
+    borderRadius:10,padding:"10px 13px",color:"#fff",fontFamily:"'DM Sans',sans-serif",
+    fontSize:"0.88rem",outline:"none",boxSizing:"border-box" as const,
+  };
+  const labelStyle = {fontSize:"0.75rem",fontWeight:700,color:"rgba(255,255,255,0.5)",marginBottom:5,display:"block" as const,textTransform:"uppercase" as const,letterSpacing:"0.05em"};
+  const rowStyle = {display:"flex",flexDirection:"column" as const,gap:5};
+
+  return (
+    <div>
+      <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1.1rem",marginBottom:4}}>Flash Sale Banner</div>
+      <div style={{fontSize:"0.82rem",color:"rgba(255,255,255,0.4)",marginBottom:20}}>
+        Control the sitewide promotional banner. Changes go live instantly.
+      </div>
+
+      {/* Active toggle */}
+      <div style={{background:"#1c1c1c",borderRadius:14,padding:16,marginBottom:16,border:"1px solid rgba(255,255,255,0.07)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div>
+          <div style={{fontWeight:700,fontSize:"0.9rem"}}>Banner Status</div>
+          <div style={{fontSize:"0.75rem",color:"rgba(255,255,255,0.4)",marginTop:2}}>{sale.active?"Live sitewide — visible to all visitors":"Currently hidden"}</div>
+        </div>
+        <button onClick={()=>update("active",!sale.active)}
+          style={{background:sale.active?"#3be8b0":"rgba(255,255,255,0.08)",color:sale.active?"#0e0e0e":"rgba(255,255,255,0.5)",
+            border:"none",borderRadius:100,padding:"8px 20px",fontWeight:800,cursor:"pointer",fontSize:"0.85rem",transition:"all .2s"}}>
+          {sale.active ? "● LIVE" : "○ Off"}
+        </button>
+      </div>
+
+      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+        <div style={rowStyle}>
+          <label style={labelStyle}>Banner Message</label>
+          <input value={sale.message} onChange={e=>update("message",e.target.value)} style={fieldStyle} placeholder="🔥 Flash Sale — Limited Time!"/>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+          <div style={rowStyle}>
+            <label style={labelStyle}>Discount (shown as badge)</label>
+            <input value={sale.discount} onChange={e=>update("discount",e.target.value)} style={fieldStyle} placeholder="20%"/>
+          </div>
+          <div style={rowStyle}>
+            <label style={labelStyle}>Coupon Code</label>
+            <input value={sale.code} onChange={e=>update("code",e.target.value.toUpperCase())} style={fieldStyle} placeholder="FLASH20"/>
+          </div>
+        </div>
+        <div style={rowStyle}>
+          <label style={labelStyle}>Sale Ends At (optional countdown)</label>
+          <input type="datetime-local" value={sale.endsAt ? sale.endsAt.slice(0,16) : ""} onChange={e=>update("endsAt",e.target.value?new Date(e.target.value).toISOString():"")} style={fieldStyle}/>
+          <div style={{fontSize:"0.7rem",color:"rgba(255,255,255,0.3)"}}>Leave blank for no countdown.</div>
+        </div>
+        <div style={rowStyle}>
+          <label style={labelStyle}>Banner Color</label>
+          <div style={{display:"flex",gap:10,flexWrap:"wrap" as const}}>
+            {(["red","green","gold","blue"] as const).map(c=>(
+              <button key={c} onClick={()=>update("color",c)}
+                style={{padding:"7px 18px",borderRadius:100,border:sale.color===c?"2px solid #fff":"2px solid transparent",
+                  background:c==="red"?"#c0392b":c==="green"?"#1a7a3a":c==="gold"?"#c07800":"#1a3a8a",
+                  color:"#fff",fontWeight:700,fontSize:"0.8rem",cursor:"pointer",textTransform:"capitalize" as const}}>
+                {c}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Preview */}
+        {sale.message && (
+          <div style={{borderRadius:10,overflow:"hidden",border:"1px solid rgba(255,255,255,0.1)"}}>
+            <div style={{fontSize:"0.68rem",color:"rgba(255,255,255,0.3)",padding:"4px 10px",background:"rgba(255,255,255,0.03)"}}>PREVIEW</div>
+            <div style={{
+              background:({red:"linear-gradient(90deg,#7f0000,#c0392b,#7f0000)",green:"linear-gradient(90deg,#0a3d1f,#1a7a3a,#0a3d1f)",gold:"linear-gradient(90deg,#5c3a00,#c07800,#5c3a00)",blue:"linear-gradient(90deg,#0a1a4a,#1a3a8a,#0a1a4a)"})[sale.color]||"",
+              padding:"10px 16px",display:"flex",alignItems:"center",gap:10,flexWrap:"wrap" as const}}>
+              <span>⚡</span>
+              <span style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"0.9rem",color:"#fff"}}>{sale.message}</span>
+              {sale.discount&&<span style={{background:"rgba(255,255,255,0.25)",fontWeight:900,fontSize:"0.82rem",padding:"2px 10px",borderRadius:100,color:"#fff"}}>{sale.discount} OFF</span>}
+              {sale.code&&<span style={{fontFamily:"monospace",background:"rgba(255,255,255,0.15)",fontWeight:700,fontSize:"0.8rem",padding:"2px 10px",borderRadius:6,color:"#fff",letterSpacing:"0.1em"}}>{sale.code}</span>}
+            </div>
+          </div>
+        )}
+
+        <button onClick={handleSave}
+          style={{background:saved?"#3be8b0":"#ff6b6b",color:"#0e0e0e",border:"none",borderRadius:12,
+            padding:"13px",fontFamily:"inherit",fontWeight:800,fontSize:"0.95rem",cursor:"pointer",
+            transition:"all .2s",marginTop:4}}>
+          {saved ? "✅ Saved & Live!" : "Save Banner Settings"}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function DosingCalculatorPage({go}:{go:Function}){
   const {dark}=useDarkMode();
@@ -6340,7 +6803,8 @@ export default function App(){
   const [pg,spg]=useState("home");
   const [pid,spid]=useState(null);
   const [user,su]=useState(()=>getSess());
-  const [aged,sa]=useState(()=>{try{return localStorage.getItem("nxg_age")==="1";}catch{return false;}});
+  useEffect(()=>{try{localStorage.removeItem("nxg_age");}catch{}},[]);
+  const [aged,sa]=useState(()=>{try{return sessionStorage.getItem("nxg_age_sess")==="1";}catch{return false;}});
   const [cart,setCart]=useState([]);
   const [catId,setCatId]=useState(null);
   const [wishlist,setWishlist]=useState(()=>{try{return JSON.parse(localStorage.getItem("nxg_wish")||"[]");}catch{return[];}});
@@ -6407,7 +6871,7 @@ export default function App(){
     if(dx>80&&dy<40&&touchStartX.current<30&&history.length>1) goBack();
   }
 
-  function confirmAge(){ localStorage.setItem("nxg_age","1"); sa(true); }
+  function confirmAge(){ try{sessionStorage.setItem("nxg_age_sess","1");}catch{}; sa(true); }
   function addToCart(product,selectedSize,selectedPrice){
     decrementInventory(product.id);
     window.dispatchEvent(new Event("nxg_inv_update"));
@@ -6438,6 +6902,7 @@ export default function App(){
     {(!aged) && <AgeGate onConfirm={confirmAge}/>}
     {COMING_SOON && <ExitIntentPopup/>}
     {COMING_SOON && <ComingSoonBanner/>}
+    <FlashSaleBanner/>
     <CookieConsent/>
     <ComplianceBanner/>
     <PageProgressBar/>
@@ -6478,13 +6943,13 @@ export default function App(){
     {pg==="about"&&<AboutPage go={go}/>}
     {pg==="journal"&&(user?<ResearchJournalPage go={go} user={user}/>:<Login go={go} onLogin={su}/>)}
     {pg==="stack"&&<StackCheckerPage go={go}/>}
-    {pg==="loyalty"&&<LoyaltyPage go={go} user={user}/>}
-    {pg==="referral"&&<ReferralPage go={go} user={user}/>}
+    {/* loyalty and referral pages removed in v3 */}
     {pg==="dosing"&&<DosingCalculatorPage go={go}/>}
     {pg==="coa"&&<CoaLibraryPage go={go}/>}
     {pg==="research"&&<div key="research" className="page-fade"><ResearchLibraryPage go={go}/></div>}
     {pg==="category"&&catId&&<div key={"cat-"+catId} className="page-fade"><CategoryPage catId={catId} go={go} wishlist={wishlist} toggleWishlist={toggleWishlist}/></div>}
     {pg==="dashboard"&&(user?<Dashboard user={user} go={go} onLogout={()=>su(null)} wishlistIds={wishlist}/>:<Login go={go} onLogin={su}/>)}
+    {pg==="chat"&&<MemberChatPage go={go} user={user}/>}
 
     <MobileBottomNav go={go} pg={pg} cartCount={cart.length}/>
     {/* ── SCROLL TO TOP + BACK BUTTONS ── */}
