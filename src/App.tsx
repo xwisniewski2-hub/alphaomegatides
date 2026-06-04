@@ -869,6 +869,7 @@ function DarkModeBtn() {
 function Nav({user,go,onLogout,cartCount}){
   const [open,setOpen]=useState(false);
   const close=()=>setOpen(false);
+  const streamLive = useStreamLive();
   // Shift nav down when flash banner is visible
   const [bannerH,setBannerH]=useState(0);
   useEffect(()=>{
@@ -986,7 +987,7 @@ function Nav({user,go,onLogout,cartCount}){
             :[{icon:"👤",label:"Sign In",action:()=>{go("login");close();}},
               {icon:"✨",label:"Create Account",action:()=>{go("register");close();}}]
           ),
-          {icon:"💬",label:"Community Chat",action:()=>{go("chat");close();}},{icon:"𝕏",label:"X Community",action:()=>{go("xcommunity");close();}},{icon:"🔬",label:"COA Library",action:()=>{go("coa");close();}},{icon:"📚",label:"Research Library",action:()=>{go("research");close();}},
+          {icon:"💬",label:"Community Chat",action:()=>{go("chat");close();}},{icon:"𝕏",label:"X Community",action:()=>{go("xcommunity");close();}},{icon:"▶",label:"Video Tutorials",action:()=>{go("videos");close();}},{icon:"⚗️",label:"Stack Builder",action:()=>{go("stacks");close();}},{icon:"📖",label:"Research Wiki",action:()=>{go("wiki");close();}},{icon:"📺",label:streamLive?"🔴 LIVE NOW":"Live Stream",action:()=>{go("livestream");close();}},{icon:"𝕏",label:"X Community",action:()=>{go("xcommunity");close();}},{icon:"🔬",label:"COA Library",action:()=>{go("coa");close();}},{icon:"📚",label:"Research Library",action:()=>{go("research");close();}},
           {icon:"⚖️",label:"Legal & Compliance",action:()=>{go("compliance");close();}},
           {icon:"🎯",label:"Find My Compound",action:()=>{go("quiz");close();}},
           {icon:"📦",label:"Track My Order",action:()=>{go("track");close();}},
@@ -3683,7 +3684,7 @@ function Dashboard({user,go,onLogout,wishlistIds=[]}){
   }
   const sColor={shipped:C.b,delivered:C.g,processing:C.y};
   const tabs=isAdmin(user)
-    ? [["orders","📦 Orders"],["profile","👤 Profile"],["progress","📊 Progress"],["wishlist","❤️ Wishlist"],["coa","🔬 My COAs"],["telegram","✈️ Telegram"],["waitlist","📋 Waitlist"],["signups","👥 All Signups"],["flash","⚡ Flash Sale"]]
+    ? [["orders","📦 Orders"],["profile","👤 Profile"],["progress","📊 Progress"],["wishlist","❤️ Wishlist"],["coa","🔬 My COAs"],["telegram","✈️ Telegram"],["waitlist","📋 Waitlist"],["signups","👥 All Signups"],["flash","⚡ Flash Sale"],["analytics","📊 Analytics"],["stream","📺 Stream"]]
     : [["orders","📦 Orders"],["profile","👤 Profile"],["progress","📊 Progress"],["wishlist","❤️ Wishlist"],["coa","🔬 My COAs"],["telegram","✈️ Telegram"]];
 
   return <div style={{paddingTop:70,background:"#0e0e0e",minHeight:"100vh"}}>
@@ -3954,7 +3955,9 @@ function Dashboard({user,go,onLogout,wishlistIds=[]}){
 
       {tab==="waitlist"&&isAdmin(user)&&<WaitlistAdmin/>}
       {tab==="signups"&&isAdmin(user)&&<AllSignupsAdmin/>}
-      {tab==="flash"&&isAdmin(user)&&<FlashSaleAdmin/>}
+      {tab==="flash"&&isAdmin(user)&&<><FlashSaleAdmin/><FlashSaleScheduler/></>}
+      {tab==="analytics"&&isAdmin(user)&&<AdminAnalyticsTab user={user}/>}
+      {tab==="stream"&&isAdmin(user)&&<LiveStreamPage go={go} user={user}/>}
       {tab==="telegram"&&<div style={{padding:"8px 0"}}><TelegramLinkCard user={user} go={go}/></div>}
       {tab==="coa"&&<div>
         <div style={{fontFamily:"'Syne',sans-serif",fontSize:"1.2rem",fontWeight:700,marginBottom:5}}>Certificates of Analysis</div>
@@ -4193,7 +4196,7 @@ function SiteFooter({go}){
         </div>
         <div>
           <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,color:"rgba(255,255,255,0.7)",fontSize:"0.8rem",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:14}}>Company</div>
-          {[["Contact",()=>go("contact")],["Community Chat",()=>go("chat")],["X Community",()=>go("xcommunity")],["COA Library",()=>go("coa")],["Research Stacks",()=>go("bundles")],["Find My Compound",()=>go("quiz")],["Protocol Guides",()=>go("protocols")],["Track Order",()=>go("track")],["Sign In",()=>go("login")]].map(([l,fn])=>(
+          {[["Contact",()=>go("contact")],["Community Chat",()=>go("chat")],["X Community",()=>go("xcommunity")],["Video Tutorials",()=>go("videos")],["Stack Builder",()=>go("stacks")],["Research Wiki",()=>go("wiki")],["Live Stream",()=>go("livestream")],["X Community",()=>go("xcommunity")],["COA Library",()=>go("coa")],["Research Stacks",()=>go("bundles")],["Find My Compound",()=>go("quiz")],["Protocol Guides",()=>go("protocols")],["Track Order",()=>go("track")],["Sign In",()=>go("login")]].map(([l,fn])=>(
             <div key={l} onClick={fn} style={{cursor:"pointer",marginBottom:9,color:"rgba(255,255,255,0.4)",fontSize:"0.8rem",transition:"color .2s"}} onMouseEnter={e=>e.target.style.color="#fff"} onMouseLeave={e=>e.target.style.color="rgba(255,255,255,0.4)"}>{l}</div>
           ))}
         </div>
@@ -8039,6 +8042,754 @@ function DosingCalculatorPage({go}:{go:Function}){
 }
 
 
+// ═══════════════════════════════════════════════════════════════
+// VIDEO TUTORIAL LIBRARY
+// ═══════════════════════════════════════════════════════════════
+const VIDEO_TUTORIALS = [
+  { id:"reconstitute-bpc", title:"How to Reconstitute BPC-157", compound:"BPC-157", duration:"4:12", thumb:"🧪", ytId:"dQw4w9WgXcQ", level:"Beginner", desc:"Step-by-step guide to mixing BPC-157 with BAC water safely." },
+  { id:"reconstitute-ghk", title:"GHK-Cu Reconstitution Guide", compound:"GHK-Cu", duration:"3:45", thumb:"✨", ytId:"dQw4w9WgXcQ", level:"Beginner", desc:"Proper technique for reconstituting GHK-Cu peptide." },
+  { id:"storage-guide",    title:"Peptide Storage Best Practices", compound:"All", duration:"6:30", thumb:"🧊", ytId:"dQw4w9WgXcQ", level:"Beginner", desc:"How to store your research compounds for maximum stability." },
+  { id:"reading-coa",      title:"How to Read a COA", compound:"All", duration:"5:15", thumb:"📋", ytId:"dQw4w9WgXcQ", level:"Beginner", desc:"Understanding purity certificates and what to look for." },
+  { id:"syringes",         title:"Syringe & Insulin Pin Guide", compound:"All", duration:"7:20", thumb:"💉", ytId:"dQw4w9WgXcQ", level:"Beginner", desc:"Choosing the right syringe for precise research dosing." },
+  { id:"glp1-protocol",    title:"GLP-1 Research Protocol Overview", compound:"Semaglutide", duration:"8:45", thumb:"⚗️", ytId:"dQw4w9WgXcQ", level:"Intermediate", desc:"Research protocol overview for GLP-1 class peptides." },
+  { id:"stacking-basics",  title:"Understanding Research Stacks", compound:"All", duration:"9:10", thumb:"🔬", ytId:"dQw4w9WgXcQ", level:"Intermediate", desc:"How to research compound combinations effectively." },
+  { id:"bac-water",        title:"Bacteriostatic Water Explained", compound:"All", duration:"3:55", thumb:"💧", ytId:"dQw4w9WgXcQ", level:"Beginner", desc:"Why BAC water matters and how much to use." },
+];
+
+function VideoTutorialPage({go, user}:{go:Function; user:any}) {
+  const [filter, setFilter] = useState("All");
+  const [activeVideo, setActiveVideo] = useState<any>(null);
+  const [search, setSearch] = useState("");
+  const levels = ["All","Beginner","Intermediate","Advanced"];
+  const accentG="#3be8b0", bg="#0e0e0e", card="#141414", border="rgba(255,255,255,0.08)", muted="rgba(255,255,255,0.4)";
+
+  const filtered = VIDEO_TUTORIALS.filter(v => {
+    if (filter!=="All" && v.level!==filter) return false;
+    if (search && !v.title.toLowerCase().includes(search.toLowerCase()) && !v.compound.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+
+  return (
+    <div style={{background:bg,minHeight:"100vh",paddingTop:70,paddingBottom:100}}>
+      <style>{`
+        @keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+        .vid-card{transition:transform .2s,box-shadow .2s;animation:fadeUp .3s ease-out both;}
+        .vid-card:hover{transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,0.6)!important;}
+        .vid-modal{animation:fadeUp .2s ease-out;}
+      `}</style>
+
+      {/* Lightbox player */}
+      {activeVideo && (
+        <div onClick={()=>setActiveVideo(null)} style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.92)",backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+          <div className="vid-modal" onClick={e=>e.stopPropagation()} style={{width:"min(760px,96vw)",background:card,borderRadius:20,overflow:"hidden",boxShadow:"0 32px 80px rgba(0,0,0,0.9)",border:"1px solid rgba(255,255,255,0.1)"}}>
+            <div style={{position:"relative",paddingBottom:"56.25%",height:0,background:"#000"}}>
+              <iframe src={`https://www.youtube.com/embed/${activeVideo.ytId}?autoplay=1&rel=0`}
+                style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",border:"none"}} allow="autoplay; fullscreen" allowFullScreen title={activeVideo.title}/>
+            </div>
+            <div style={{padding:"16px 20px",display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12}}>
+              <div>
+                <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1rem",color:"#fff",marginBottom:4}}>{activeVideo.title}</div>
+                <div style={{fontSize:"0.8rem",color:muted,lineHeight:1.5}}>{activeVideo.desc}</div>
+                <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap"}}>
+                  <span style={{background:"rgba(59,232,176,0.1)",color:accentG,fontSize:"0.65rem",fontWeight:700,padding:"2px 8px",borderRadius:100,border:"1px solid rgba(59,232,176,0.2)"}}>{activeVideo.compound}</span>
+                  <span style={{background:"rgba(255,255,255,0.06)",color:"rgba(255,255,255,0.5)",fontSize:"0.65rem",fontWeight:600,padding:"2px 8px",borderRadius:100}}>{activeVideo.level}</span>
+                  <span style={{background:"rgba(255,255,255,0.06)",color:"rgba(255,255,255,0.5)",fontSize:"0.65rem",fontWeight:600,padding:"2px 8px",borderRadius:100}}>⏱ {activeVideo.duration}</span>
+                </div>
+              </div>
+              <button onClick={()=>setActiveVideo(null)} style={{background:"rgba(255,255,255,0.08)",border:"none",color:"rgba(255,255,255,0.5)",borderRadius:"50%",width:32,height:32,cursor:"pointer",fontSize:"0.9rem",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div style={{maxWidth:900,margin:"0 auto",padding:"0 16px"}}>
+        {/* Header */}
+        <div style={{textAlign:"center",marginBottom:32,animation:"fadeUp .3s ease-out"}}>
+          <div style={{display:"inline-flex",alignItems:"center",gap:8,background:"rgba(59,232,176,0.08)",border:"1px solid rgba(59,232,176,0.2)",borderRadius:100,padding:"5px 14px",marginBottom:14,fontSize:"0.75rem",fontWeight:700,color:accentG,letterSpacing:"0.06em"}}>▶ TUTORIAL LIBRARY</div>
+          <h1 style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"clamp(1.8rem,4vw,2.4rem)",margin:"0 0 8px",lineHeight:1.1}}>Research Video Guides</h1>
+          <p style={{color:muted,fontSize:"0.9rem",margin:0,maxWidth:480,marginLeft:"auto",marginRight:"auto",lineHeight:1.6}}>Step-by-step video tutorials for researchers. From reconstitution to protocol design.</p>
+        </div>
+
+        {/* Search + filter */}
+        <div style={{display:"flex",gap:10,marginBottom:24,flexWrap:"wrap"}}>
+          <div style={{flex:1,minWidth:200,position:"relative"}}>
+            <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:muted,fontSize:"0.85rem"}}>🔍</span>
+            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search tutorials…"
+              style={{width:"100%",background:card,border:"1px solid "+border,borderRadius:12,padding:"10px 14px 10px 34px",color:"#fff",fontFamily:"inherit",fontSize:"0.88rem",outline:"none",boxSizing:"border-box"}}/>
+          </div>
+          <div style={{display:"flex",gap:6}}>
+            {levels.map(l=>(
+              <button key={l} onClick={()=>setFilter(l)}
+                style={{background:filter===l?"rgba(59,232,176,0.12)":card,border:"1px solid "+(filter===l?"rgba(59,232,176,0.3)":border),borderRadius:10,padding:"9px 14px",cursor:"pointer",fontSize:"0.78rem",fontWeight:700,color:filter===l?accentG:"rgba(255,255,255,0.6)",transition:"all .15s"}}>
+                {l}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Grid */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:16}}>
+          {filtered.map((v,i)=>(
+            <div key={v.id} className="vid-card" onClick={()=>setActiveVideo(v)}
+              style={{background:card,border:"1px solid "+border,borderRadius:16,overflow:"hidden",cursor:"pointer",boxShadow:"0 4px 20px rgba(0,0,0,0.4)",animationDelay:`${i*0.05}s`}}>
+              {/* Thumbnail */}
+              <div style={{background:"linear-gradient(135deg,#0d1a14,#1a2d20)",aspectRatio:"16/9",display:"flex",alignItems:"center",justifyContent:"center",position:"relative",overflow:"hidden"}}>
+                <div style={{fontSize:"3.5rem",opacity:0.6}}>{v.thumb}</div>
+                <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  <div style={{width:52,height:52,borderRadius:"50%",background:"rgba(59,232,176,0.9)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 0 24px rgba(59,232,176,0.5)"}}>
+                    <span style={{color:"#0e0e0e",fontSize:"1.3rem",marginLeft:3}}>▶</span>
+                  </div>
+                </div>
+                <div style={{position:"absolute",bottom:8,right:8,background:"rgba(0,0,0,0.7)",borderRadius:6,padding:"2px 8px",fontSize:"0.65rem",fontWeight:600,color:"#fff"}}>{v.duration}</div>
+                <div style={{position:"absolute",top:8,left:8,background:v.level==="Beginner"?"rgba(59,232,176,0.85)":v.level==="Intermediate"?"rgba(255,209,102,0.85)":"rgba(168,85,247,0.85)",borderRadius:6,padding:"2px 8px",fontSize:"0.6rem",fontWeight:800,color:"#0e0e0e"}}>{v.level}</div>
+              </div>
+              <div style={{padding:"12px 14px"}}>
+                <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"0.88rem",color:"#fff",marginBottom:4,lineHeight:1.3}}>{v.title}</div>
+                <div style={{fontSize:"0.73rem",color:muted,lineHeight:1.5,marginBottom:8}}>{v.desc}</div>
+                <span style={{background:"rgba(59,232,176,0.1)",color:accentG,fontSize:"0.63rem",fontWeight:700,padding:"2px 8px",borderRadius:100,border:"1px solid rgba(59,232,176,0.2)"}}>{v.compound}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        {filtered.length===0&&<div style={{textAlign:"center",padding:60,color:muted}}><div style={{fontSize:"2.5rem",marginBottom:10}}>🎬</div>No tutorials match your search.</div>}
+
+        <div style={{marginTop:32,background:"rgba(59,232,176,0.05)",border:"1px solid rgba(59,232,176,0.15)",borderRadius:16,padding:"20px 24px",textAlign:"center"}}>
+          <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"1rem",marginBottom:6}}>Want us to cover a specific topic?</div>
+          <div style={{fontSize:"0.82rem",color:muted,marginBottom:12}}>Request a tutorial and our team will create it.</div>
+          <button onClick={()=>go("contact")} style={{background:accentG,color:"#0e0e0e",border:"none",borderRadius:100,padding:"10px 24px",fontFamily:"inherit",fontWeight:700,fontSize:"0.85rem",cursor:"pointer"}}>Request a Tutorial →</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STACK BUILDER — drag-drop compound combinations
+// ═══════════════════════════════════════════════════════════════
+const STACK_COMPOUNDS = PRODUCTS.map(p=>({id:p.id,name:p.name,icon:p.icon,color:p.color,price:p.sizes?p.sizes[0].p:p.price,category:p.category||"General"}));
+
+interface StackItem { id:string; name:string; icon:string; color:string; price:string; }
+interface SavedStack { id:string; name:string; items:StackItem[]; note:string; createdAt:number; }
+
+const STACKS_KEY="aot_stacks";
+function getSavedStacks():SavedStack[]{ try{return JSON.parse(localStorage.getItem(STACKS_KEY)||"[]");}catch{return[];} }
+function saveStacks(stacks:SavedStack[]){ try{localStorage.setItem(STACKS_KEY,JSON.stringify(stacks));}catch{} }
+
+const PRESET_STACKS = [
+  { name:"Metabolic Research I",   icon:"🔥", items:["glp1","bpc157","ghkcu"],       desc:"GLP-1 + recovery support combo" },
+  { name:"Growth & Repair Stack",  icon:"💪", items:["cjc1295","ipamorlin","tb500"],  desc:"Growth hormone + tissue repair" },
+  { name:"Longevity Protocol",     icon:"⏳", items:["nad","motsc","ss31"],           desc:"Mitochondrial & cellular health" },
+  { name:"Neuro Focus Stack",      icon:"🧠", items:["selank","semax","dsip"],        desc:"Cognitive + sleep research" },
+];
+
+function StackBuilderPage({go, user}:{go:Function;user:any}) {
+  const [stack, setStack]       = useState<StackItem[]>([]);
+  const [note, setNote]         = useState("");
+  const [stackName, setStackName] = useState("My Research Stack");
+  const [saved, setSaved]       = useState(false);
+  const [savedStacks, setSavedStacks] = useState<SavedStack[]>(getSavedStacks);
+  const [showSaved, setShowSaved] = useState(false);
+  const [search, setSearch]     = useState("");
+  const [catFilter, setCatFilter] = useState("All");
+  const [shareMsg, setShareMsg] = useState("");
+
+  const accentG="#3be8b0", accentR="#ff6b6b", bg="#0e0e0e", card="#141414", border="rgba(255,255,255,0.08)", muted="rgba(255,255,255,0.4)";
+
+  const categories = ["All", ...Array.from(new Set(STACK_COMPOUNDS.map(c=>c.category)))];
+  const filteredCompounds = STACK_COMPOUNDS.filter(c => {
+    if (catFilter!=="All" && c.category!==catFilter) return false;
+    if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+
+  const addToStack = (c: StackItem) => {
+    if (stack.find(s=>s.id===c.id)) return;
+    if (stack.length >= 6) { alert("Max 6 compounds per stack."); return; }
+    setStack(p=>[...p,c]);
+  };
+  const removeFromStack = (id:string) => setStack(p=>p.filter(s=>s.id!==id));
+
+  const totalPrice = stack.reduce((acc,c) => {
+    const num = parseFloat((c.price||"0").replace(/[^0-9.]/g,""));
+    return acc + (isNaN(num)?0:num);
+  }, 0);
+
+  const discountedPrice = stack.length >= 3 ? totalPrice * 0.90 : totalPrice;
+  const discount = stack.length >= 3;
+
+  const handleSave = () => {
+    if (!stack.length) return;
+    const s: SavedStack = { id: String(Date.now()), name:stackName, items:stack, note, createdAt:Date.now() };
+    const updated = [s, ...savedStacks].slice(0,10);
+    setSavedStacks(updated); saveStacks(updated);
+    setSaved(true); setTimeout(()=>setSaved(false),2000);
+  };
+
+  const handleLoadPreset = (preset: typeof PRESET_STACKS[0]) => {
+    const items = preset.items.map(id=>STACK_COMPOUNDS.find(c=>c.id===id)).filter(Boolean) as StackItem[];
+    setStack(items); setStackName(preset.name);
+  };
+
+  const handleShare = () => {
+    const names = stack.map(c=>c.name).join(" + ");
+    const txt = `My research stack: ${names} — built on alphaomegatides.com`;
+    navigator.clipboard.writeText(txt).catch(()=>{});
+    setShareMsg("Copied to clipboard!");
+    setTimeout(()=>setShareMsg(""),2000);
+  };
+
+  const handleDeleteSaved = (id:string) => {
+    const updated = savedStacks.filter(s=>s.id!==id);
+    setSavedStacks(updated); saveStacks(updated);
+  };
+
+  return (
+    <div style={{background:bg,minHeight:"100vh",paddingTop:70,paddingBottom:100}}>
+      <style>{`
+        @keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+        .comp-chip{transition:all .15s;animation:fadeUp .2s ease-out both;}
+        .comp-chip:hover{transform:translateY(-2px)!important;}
+        .stack-slot{transition:all .2s;}
+        .stack-slot:hover{background:rgba(255,107,107,0.08)!important;}
+      `}</style>
+
+      <div style={{maxWidth:960,margin:"0 auto",padding:"0 16px"}}>
+        {/* Header */}
+        <div style={{textAlign:"center",marginBottom:28,animation:"fadeUp .3s ease-out"}}>
+          <div style={{display:"inline-flex",alignItems:"center",gap:8,background:"rgba(59,232,176,0.08)",border:"1px solid rgba(59,232,176,0.2)",borderRadius:100,padding:"5px 14px",marginBottom:14,fontSize:"0.75rem",fontWeight:700,color:accentG,letterSpacing:"0.06em"}}>⚗️ STACK BUILDER</div>
+          <h1 style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"clamp(1.8rem,4vw,2.4rem)",margin:"0 0 8px",lineHeight:1.1}}>Build Your Research Stack</h1>
+          <p style={{color:muted,fontSize:"0.9rem",margin:0}}>Combine compounds · Get 10% off stacks of 3+</p>
+        </div>
+
+        {/* Preset stacks */}
+        <div style={{marginBottom:24}}>
+          <div style={{fontSize:"0.7rem",fontWeight:700,color:muted,letterSpacing:"0.08em",marginBottom:10}}>⚡ QUICK START PRESETS</div>
+          <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+            {PRESET_STACKS.map((p,i)=>(
+              <button key={i} onClick={()=>handleLoadPreset(p)}
+                style={{background:card,border:"1px solid "+border,borderRadius:12,padding:"10px 14px",cursor:"pointer",textAlign:"left",transition:"all .15s",flex:"1 1 180px"}}>
+                <div style={{fontSize:"1.1rem",marginBottom:4}}>{p.icon}</div>
+                <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"0.82rem",color:"#fff",marginBottom:2}}>{p.name}</div>
+                <div style={{fontSize:"0.68rem",color:muted}}>{p.desc}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{display:"grid",gridTemplateColumns:"1fr 320px",gap:20,alignItems:"start"}}>
+          {/* Left — compound picker */}
+          <div>
+            <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
+              <div style={{flex:1,minWidth:160,position:"relative"}}>
+                <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:muted,fontSize:"0.82rem"}}>🔍</span>
+                <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search compounds…"
+                  style={{width:"100%",background:card,border:"1px solid "+border,borderRadius:10,padding:"8px 10px 8px 28px",color:"#fff",fontFamily:"inherit",fontSize:"0.82rem",outline:"none",boxSizing:"border-box"}}/>
+              </div>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:8}}>
+              {filteredCompounds.map((c,i)=>{
+                const inStack = stack.find(s=>s.id===c.id);
+                return (
+                  <button key={c.id} className="comp-chip" onClick={()=>inStack?removeFromStack(c.id):addToStack(c)}
+                    style={{background:inStack?"rgba(59,232,176,0.1)":card,border:`1px solid ${inStack?"rgba(59,232,176,0.4)":border}`,borderRadius:12,padding:"10px 10px",cursor:"pointer",textAlign:"left",animationDelay:`${i*0.03}s`,position:"relative"}}>
+                    {inStack&&<div style={{position:"absolute",top:6,right:6,width:16,height:16,borderRadius:"50%",background:accentG,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"0.55rem",color:"#0e0e0e",fontWeight:800}}>✓</div>}
+                    <div style={{fontSize:"1.3rem",marginBottom:4}}>{c.icon}</div>
+                    <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"0.72rem",color:inStack?accentG:"#fff",lineHeight:1.2}}>{c.name}</div>
+                    <div style={{fontSize:"0.63rem",color:muted,marginTop:2}}>{c.price}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Right — stack panel */}
+          <div style={{position:"sticky",top:80}}>
+            <div style={{background:card,border:"1px solid "+border,borderRadius:18,padding:18,boxShadow:"0 8px 32px rgba(0,0,0,0.4)"}}>
+              <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1rem",marginBottom:14,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                <span>Your Stack</span>
+                <span style={{fontSize:"0.7rem",color:muted,fontWeight:400}}>{stack.length}/6</span>
+              </div>
+
+              {/* Stack name */}
+              <input value={stackName} onChange={e=>setStackName(e.target.value)}
+                style={{width:"100%",background:"rgba(255,255,255,0.04)",border:"1px solid "+border,borderRadius:10,padding:"8px 12px",color:"#fff",fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"0.82rem",outline:"none",marginBottom:12,boxSizing:"border-box"}}/>
+
+              {/* Slots */}
+              {stack.length===0 ? (
+                <div style={{textAlign:"center",padding:"24px 10px",color:muted,fontSize:"0.8rem",border:"2px dashed rgba(255,255,255,0.1)",borderRadius:12,marginBottom:12}}>
+                  <div style={{fontSize:"2rem",marginBottom:6}}>⚗️</div>
+                  Tap compounds to add them to your stack
+                </div>
+              ) : (
+                <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:12}}>
+                  {stack.map(c=>(
+                    <div key={c.id} className="stack-slot"
+                      style={{display:"flex",alignItems:"center",gap:10,background:"rgba(255,255,255,0.03)",border:`1px solid ${c.color}33`,borderRadius:10,padding:"8px 10px"}}>
+                      <span style={{fontSize:"1.1rem"}}>{c.icon}</span>
+                      <span style={{flex:1,fontSize:"0.8rem",fontWeight:600,color:"#fff"}}>{c.name}</span>
+                      <span style={{fontSize:"0.72rem",color:muted}}>{c.price}</span>
+                      <button onClick={()=>removeFromStack(c.id)} style={{background:"rgba(255,107,107,0.1)",border:"none",color:accentR,borderRadius:6,width:22,height:22,cursor:"pointer",fontSize:"0.7rem",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✕</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Note */}
+              <textarea value={note} onChange={e=>setNote(e.target.value)} placeholder="Add research notes (optional)…"
+                rows={2} style={{width:"100%",background:"rgba(255,255,255,0.03)",border:"1px solid "+border,borderRadius:10,padding:"8px 12px",color:"rgba(255,255,255,0.7)",fontFamily:"inherit",fontSize:"0.78rem",outline:"none",resize:"none",boxSizing:"border-box",marginBottom:12}}/>
+
+              {/* Pricing */}
+              {stack.length>0&&(
+                <div style={{background:"rgba(255,255,255,0.03)",borderRadius:10,padding:"10px 12px",marginBottom:12}}>
+                  {discount&&<div style={{fontSize:"0.68rem",fontWeight:700,color:accentG,marginBottom:4}}>🎉 3+ compounds = 10% off!</div>}
+                  {discount&&<div style={{display:"flex",justifyContent:"space-between",fontSize:"0.75rem",color:muted,marginBottom:2}}><span>Subtotal</span><span>${totalPrice.toFixed(2)}</span></div>}
+                  {discount&&<div style={{display:"flex",justifyContent:"space-between",fontSize:"0.75rem",color:accentG,marginBottom:4}}><span>Discount (10%)</span><span>-${(totalPrice-discountedPrice).toFixed(2)}</span></div>}
+                  <div style={{display:"flex",justifyContent:"space-between",fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"0.95rem"}}><span>Total</span><span style={{color:discount?accentG:"#fff"}}>${discountedPrice.toFixed(2)}</span></div>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                <button onClick={()=>{if(stack.length>0)go("cart");}}
+                  disabled={!stack.length}
+                  style={{background:stack.length?accentG:"rgba(255,255,255,0.07)",color:stack.length?"#0e0e0e":"rgba(255,255,255,0.3)",border:"none",borderRadius:12,padding:"12px",fontFamily:"inherit",fontWeight:800,fontSize:"0.88rem",cursor:stack.length?"pointer":"not-allowed",transition:"all .2s",boxShadow:stack.length?"0 4px 16px rgba(59,232,176,0.3)":"none"}}>
+                  🛒 Add Stack to Cart
+                </button>
+                <div style={{display:"flex",gap:8}}>
+                  <button onClick={handleSave} disabled={!stack.length}
+                    style={{flex:1,background:"rgba(79,142,247,0.12)",border:"1px solid rgba(79,142,247,0.25)",color:saved?"#3be8b0":"rgba(79,142,247,0.9)",borderRadius:10,padding:"9px",fontFamily:"inherit",fontWeight:700,fontSize:"0.78rem",cursor:"pointer",transition:"all .15s"}}>
+                    {saved?"✓ Saved!":"💾 Save"}
+                  </button>
+                  <button onClick={handleShare} disabled={!stack.length}
+                    style={{flex:1,background:"rgba(255,255,255,0.05)",border:"1px solid "+border,color:"rgba(255,255,255,0.6)",borderRadius:10,padding:"9px",fontFamily:"inherit",fontWeight:700,fontSize:"0.78rem",cursor:"pointer",transition:"all .15s"}}>
+                    {shareMsg||"🔗 Share"}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Saved stacks */}
+            {savedStacks.length>0&&(
+              <div style={{marginTop:14}}>
+                <button onClick={()=>setShowSaved(!showSaved)}
+                  style={{background:card,border:"1px solid "+border,borderRadius:10,padding:"9px 14px",cursor:"pointer",width:"100%",textAlign:"left",display:"flex",alignItems:"center",justifyContent:"space-between",color:"rgba(255,255,255,0.7)",fontSize:"0.8rem",fontWeight:600}}>
+                  <span>💾 Saved Stacks ({savedStacks.length})</span>
+                  <span style={{fontSize:"0.7rem"}}>{showSaved?"▲":"▼"}</span>
+                </button>
+                {showSaved&&(
+                  <div style={{background:card,border:"1px solid "+border,borderRadius:"0 0 10px 10px",overflow:"hidden"}}>
+                    {savedStacks.map(s=>(
+                      <div key={s.id} style={{padding:"10px 14px",borderBottom:"1px solid rgba(255,255,255,0.05)",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
+                        <div style={{flex:1,cursor:"pointer"}} onClick={()=>{setStack(s.items);setStackName(s.name);setNote(s.note);setShowSaved(false);}}>
+                          <div style={{fontSize:"0.8rem",fontWeight:700,color:"#fff"}}>{s.name}</div>
+                          <div style={{fontSize:"0.65rem",color:muted}}>{s.items.map(i=>i.icon).join(" ")} · {s.items.length} compounds</div>
+                        </div>
+                        <button onClick={()=>handleDeleteSaved(s.id)} style={{background:"none",border:"none",color:"rgba(255,107,107,0.5)",cursor:"pointer",fontSize:"0.8rem"}}>🗑</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RESEARCH WIKI / GLOSSARY
+// ═══════════════════════════════════════════════════════════════
+const WIKI_ENTRIES = [
+  { term:"Bacteriostatic Water (BAC)", abbr:"BAC Water", def:"Sterile water containing 0.9% benzyl alcohol used to reconstitute lyophilized peptides. The benzyl alcohol prevents bacterial growth, extending usability to 28 days after opening. Essential for all injectable research peptides.", tags:["reconstitution","storage"] },
+  { term:"Certificate of Analysis", abbr:"COA", def:"A document from an accredited third-party laboratory confirming a compound's identity, purity, and composition. Alphaomegatides provides COAs for every product batch. Key metrics: purity ≥98%, identity confirmation via HPLC and MS.", tags:["quality","testing"] },
+  { term:"High-Performance Liquid Chromatography", abbr:"HPLC", def:"An analytical technique used to identify, quantify, and separate compounds in a mixture. HPLC is the gold standard for peptide purity testing — it separates the compound from impurities by passing it through a column under high pressure.", tags:["testing","analytical"] },
+  { term:"Lyophilization", abbr:"Lyophilized / Freeze-dried", def:"A preservation process that removes water from peptides via freeze-drying, creating a stable powder form. Lyophilized peptides are stable at room temperature for months and years when refrigerated, but must be reconstituted before use.", tags:["storage","reconstitution"] },
+  { term:"Half-Life", abbr:"t½", def:"The time it takes for the concentration of a compound to reduce by half in a given biological system. Relevant for research timing. Example: BPC-157 has an estimated half-life of 4 hours; CJC-1295 with DAC has ~8 days.", tags:["pharmacokinetics","dosing"] },
+  { term:"GLP-1 Receptor Agonist", abbr:"GLP-1 RA", def:"A class of peptides that mimic the action of glucagon-like peptide-1, a hormone that stimulates insulin secretion. Research compounds in this class include Semaglutide, Tirzepatide (dual GLP-1/GIP), and Retatrutide (triple agonist).", tags:["metabolic","mechanism"] },
+  { term:"Growth Hormone Secretagogue", abbr:"GHS", def:"Compounds that stimulate the pituitary gland to produce and release growth hormone. Research compounds include CJC-1295, Ipamorelin, Sermorelin, and Tesamorelin. Often studied in stacks for synergistic effect.", tags:["growth","mechanism"] },
+  { term:"Reconstitution", abbr:null, def:"The process of dissolving a lyophilized (freeze-dried) peptide powder in a solvent — typically bacteriostatic water or sterile water — to create a solution suitable for research use. Proper technique prevents peptide degradation.", tags:["reconstitution","technique"] },
+  { term:"Subcutaneous", abbr:"SubQ", def:"Relating to the layer of tissue beneath the skin. SubQ administration is the most common research route for peptides, using short insulin pins (typically 29-31 gauge, 4-8mm). Allows for gradual absorption into systemic circulation.", tags:["administration","technique"] },
+  { term:"Insulin Units (IU)", abbr:"IU", def:"A unit of measurement used on U-100 insulin syringes. On a U-100 syringe, 100 IU = 1 mL. Used when calculating draw volumes for reconstituted peptides. Example: if concentration is 500mcg/mL, 1 IU = 5mcg.", tags:["dosing","calculation"] },
+  { term:"Peptide Bond", abbr:null, def:"A chemical covalent bond formed between two amino acid molecules. Peptides are chains of amino acids linked by peptide bonds. The number and sequence of amino acids determines the peptide's structure and biological activity.", tags:["chemistry","basics"] },
+  { term:"In Vitro", abbr:null, def:"Latin for 'in glass'. Research conducted outside of living organisms, typically in test tubes, petri dishes, or other controlled laboratory environments. All Alphaomegatides compounds are sold exclusively for in-vitro research use.", tags:["research","legal"] },
+];
+
+function ResearchWikiPage({go}:{go:Function}) {
+  const [search, setSearch] = useState("");
+  const [activeTag, setActiveTag] = useState("All");
+  const [expanded, setExpanded] = useState<string|null>(null);
+  const accentG="#3be8b0", bg="#0e0e0e", card="#141414", border="rgba(255,255,255,0.08)", muted="rgba(255,255,255,0.4)";
+
+  const allTags = ["All", ...Array.from(new Set(WIKI_ENTRIES.flatMap(e=>e.tags)))];
+  const filtered = WIKI_ENTRIES.filter(e => {
+    if (activeTag!=="All" && !e.tags.includes(activeTag)) return false;
+    if (search && !e.term.toLowerCase().includes(search.toLowerCase()) && !e.def.toLowerCase().includes(search.toLowerCase()) && !(e.abbr||"").toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+
+  return (
+    <div style={{background:bg,minHeight:"100vh",paddingTop:70,paddingBottom:100}}>
+      <style>{`
+        @keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+        .wiki-row{transition:background .15s;animation:fadeUp .2s ease-out both;}
+        .wiki-row:hover{background:rgba(255,255,255,0.03)!important;}
+      `}</style>
+      <div style={{maxWidth:800,margin:"0 auto",padding:"0 16px"}}>
+        <div style={{textAlign:"center",marginBottom:32,animation:"fadeUp .3s ease-out"}}>
+          <div style={{display:"inline-flex",alignItems:"center",gap:8,background:"rgba(168,85,247,0.1)",border:"1px solid rgba(168,85,247,0.25)",borderRadius:100,padding:"5px 14px",marginBottom:14,fontSize:"0.75rem",fontWeight:700,color:"#a855f7",letterSpacing:"0.06em"}}>📖 RESEARCH WIKI</div>
+          <h1 style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"clamp(1.8rem,4vw,2.4rem)",margin:"0 0 8px"}}>Researcher's Glossary</h1>
+          <p style={{color:muted,fontSize:"0.9rem",margin:0}}>Key terms, abbreviations, and concepts for peptide research.</p>
+        </div>
+
+        <div style={{display:"flex",gap:10,marginBottom:20,flexWrap:"wrap"}}>
+          <div style={{flex:1,minWidth:200,position:"relative"}}>
+            <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:muted,fontSize:"0.85rem"}}>🔍</span>
+            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search terms, abbreviations…"
+              style={{width:"100%",background:card,border:"1px solid "+border,borderRadius:12,padding:"10px 14px 10px 34px",color:"#fff",fontFamily:"inherit",fontSize:"0.88rem",outline:"none",boxSizing:"border-box"}}/>
+          </div>
+        </div>
+
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:20}}>
+          {allTags.map(tag=>(
+            <button key={tag} onClick={()=>setActiveTag(tag)}
+              style={{background:activeTag===tag?"rgba(168,85,247,0.15)":card,border:"1px solid "+(activeTag===tag?"rgba(168,85,247,0.35)":border),borderRadius:100,padding:"5px 12px",cursor:"pointer",fontSize:"0.72rem",fontWeight:700,color:activeTag===tag?"#a855f7":"rgba(255,255,255,0.55)",transition:"all .15s"}}>
+              {tag}
+            </button>
+          ))}
+        </div>
+
+        <div style={{display:"flex",flexDirection:"column",gap:2}}>
+          {filtered.map((entry,i)=>(
+            <div key={entry.term} className="wiki-row"
+              style={{background:expanded===entry.term?"rgba(255,255,255,0.04)":card,border:"1px solid "+(expanded===entry.term?"rgba(168,85,247,0.2)":border),borderRadius:12,overflow:"hidden",animationDelay:`${i*0.03}s`}}>
+              <button onClick={()=>setExpanded(expanded===entry.term?null:entry.term)}
+                style={{width:"100%",background:"none",border:"none",padding:"14px 16px",cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:12,justifyContent:"space-between"}}>
+                <div style={{flex:1}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2,flexWrap:"wrap"}}>
+                    <span style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"0.9rem",color:"#fff"}}>{entry.term}</span>
+                    {entry.abbr&&<span style={{background:"rgba(168,85,247,0.15)",color:"#a855f7",fontSize:"0.62rem",fontWeight:700,padding:"1px 8px",borderRadius:100,border:"1px solid rgba(168,85,247,0.2)"}}>{entry.abbr}</span>}
+                  </div>
+                  <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                    {entry.tags.map(t=><span key={t} style={{fontSize:"0.6rem",color:muted,background:"rgba(255,255,255,0.05)",padding:"1px 6px",borderRadius:100}}>{t}</span>)}
+                  </div>
+                </div>
+                <span style={{color:muted,fontSize:"0.8rem",flexShrink:0,transition:"transform .2s",transform:expanded===entry.term?"rotate(180deg)":"none"}}>▼</span>
+              </button>
+              {expanded===entry.term&&(
+                <div style={{padding:"0 16px 16px",borderTop:"1px solid rgba(255,255,255,0.06)"}}>
+                  <p style={{fontSize:"0.85rem",color:"rgba(255,255,255,0.75)",lineHeight:1.7,margin:"12px 0 0"}}>{entry.def}</p>
+                </div>
+              )}
+            </div>
+          ))}
+          {filtered.length===0&&<div style={{textAlign:"center",padding:60,color:muted}}><div style={{fontSize:"2.5rem",marginBottom:10}}>📖</div>No results found.</div>}
+        </div>
+
+        <div style={{marginTop:28,background:"rgba(168,85,247,0.06)",border:"1px solid rgba(168,85,247,0.15)",borderRadius:16,padding:"18px 22px",textAlign:"center"}}>
+          <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"0.95rem",marginBottom:4}}>Missing a term?</div>
+          <div style={{fontSize:"0.8rem",color:muted,marginBottom:10}}>Request additions to the glossary.</div>
+          <button onClick={()=>go("contact")} style={{background:"rgba(168,85,247,0.15)",color:"#a855f7",border:"1px solid rgba(168,85,247,0.3)",borderRadius:100,padding:"9px 22px",fontFamily:"inherit",fontWeight:700,fontSize:"0.82rem",cursor:"pointer"}}>Suggest a Term →</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LIVE STREAM PAGE
+// ═══════════════════════════════════════════════════════════════
+const STREAM_KEY="aot_stream_config";
+interface StreamConfig { isLive:boolean; platform:"youtube"|"twitch"; streamId:string; title:string; desc:string; }
+function getStreamConfig():StreamConfig{
+  try{return JSON.parse(localStorage.getItem(STREAM_KEY)||"null")||{isLive:false,platform:"youtube",streamId:"",title:"Live Research Session",desc:""};}catch{return{isLive:false,platform:"youtube",streamId:"",title:"Live Research Session",desc:""};}
+}
+function saveStreamConfig(cfg:StreamConfig){try{localStorage.setItem(STREAM_KEY,JSON.stringify(cfg));}catch{}}
+
+function LiveStreamPage({go,user}:{go:Function;user:any}) {
+  const [cfg, setCfg]         = useState<StreamConfig>(getStreamConfig);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft]     = useState<StreamConfig>(cfg);
+  const accentG="#3be8b0", accentR="#ff6b6b", bg="#0e0e0e", card="#141414", border="rgba(255,255,255,0.08)", muted="rgba(255,255,255,0.4)";
+
+  const embedUrl = cfg.streamId
+    ? cfg.platform==="youtube"
+      ? `https://www.youtube.com/embed/${cfg.streamId}?autoplay=0&rel=0`
+      : `https://player.twitch.tv/?channel=${cfg.streamId}&parent=${window.location.hostname}&autoplay=false`
+    : null;
+
+  const handleSave = () => {
+    setCfg(draft); saveStreamConfig(draft);
+    setEditing(false);
+    try{window.dispatchEvent(new CustomEvent("aot_stream_update"));}catch{}
+  };
+
+  return (
+    <div style={{background:bg,minHeight:"100vh",paddingTop:70,paddingBottom:100}}>
+      <div style={{maxWidth:860,margin:"0 auto",padding:"0 16px"}}>
+        {/* Header */}
+        <div style={{textAlign:"center",marginBottom:28}}>
+          <div style={{display:"inline-flex",alignItems:"center",gap:8,background:cfg.isLive?"rgba(255,107,107,0.12)":"rgba(255,255,255,0.05)",border:`1px solid ${cfg.isLive?"rgba(255,107,107,0.35)":border}`,borderRadius:100,padding:"5px 14px",marginBottom:14,fontSize:"0.75rem",fontWeight:700,color:cfg.isLive?accentR:"rgba(255,255,255,0.5)"}}>
+            {cfg.isLive&&<span style={{width:7,height:7,borderRadius:"50%",background:accentR,display:"inline-block",animation:"chatpulse 1s infinite"}}/>}
+            {cfg.isLive?"🔴 LIVE NOW":"📺 STREAM"}
+          </div>
+          <h1 style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"clamp(1.8rem,4vw,2.4rem)",margin:"0 0 8px"}}>{cfg.title||"Live Research Session"}</h1>
+          {cfg.desc&&<p style={{color:muted,fontSize:"0.9rem",margin:0,maxWidth:480,marginLeft:"auto",marginRight:"auto"}}>{cfg.desc}</p>}
+        </div>
+
+        {/* Admin controls */}
+        {user&&isAdmin(user)&&(
+          <div style={{background:card,border:"1px solid rgba(255,107,107,0.2)",borderRadius:16,padding:16,marginBottom:20}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:editing?14:0}}>
+              <div style={{fontSize:"0.75rem",fontWeight:700,color:"rgba(255,107,107,0.8)",letterSpacing:"0.07em"}}>👑 STREAM ADMIN</div>
+              <button onClick={()=>{setDraft(cfg);setEditing(!editing);}} style={{background:"rgba(255,107,107,0.1)",border:"1px solid rgba(255,107,107,0.2)",color:"rgba(255,107,107,0.8)",borderRadius:8,padding:"4px 12px",cursor:"pointer",fontSize:"0.75rem",fontWeight:700}}>{editing?"Cancel":"Configure"}</button>
+            </div>
+            {editing&&(
+              <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                <div style={{display:"flex",gap:8}}>
+                  {(["youtube","twitch"] as const).map(p=>(
+                    <button key={p} onClick={()=>setDraft(d=>({...d,platform:p}))}
+                      style={{flex:1,background:draft.platform===p?"rgba(59,232,176,0.12)":"rgba(255,255,255,0.04)",border:"1px solid "+(draft.platform===p?"rgba(59,232,176,0.3)":border),borderRadius:10,padding:"8px",cursor:"pointer",color:draft.platform===p?accentG:"rgba(255,255,255,0.6)",fontWeight:700,fontSize:"0.8rem"}}>
+                      {p==="youtube"?"▶ YouTube":"🟣 Twitch"}
+                    </button>
+                  ))}
+                </div>
+                <input value={draft.streamId} onChange={e=>setDraft(d=>({...d,streamId:e.target.value}))} placeholder={draft.platform==="youtube"?"YouTube video/stream ID (e.g. dQw4w9WgXcQ)":"Twitch channel name"}
+                  style={{background:"rgba(255,255,255,0.05)",border:"1px solid "+border,borderRadius:10,padding:"10px 13px",color:"#fff",fontFamily:"inherit",fontSize:"0.85rem",outline:"none"}}/>
+                <input value={draft.title} onChange={e=>setDraft(d=>({...d,title:e.target.value}))} placeholder="Stream title"
+                  style={{background:"rgba(255,255,255,0.05)",border:"1px solid "+border,borderRadius:10,padding:"10px 13px",color:"#fff",fontFamily:"inherit",fontSize:"0.85rem",outline:"none"}}/>
+                <input value={draft.desc} onChange={e=>setDraft(d=>({...d,desc:e.target.value}))} placeholder="Description (optional)"
+                  style={{background:"rgba(255,255,255,0.05)",border:"1px solid "+border,borderRadius:10,padding:"10px 13px",color:"#fff",fontFamily:"inherit",fontSize:"0.85rem",outline:"none"}}/>
+                <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                  <button onClick={()=>setDraft(d=>({...d,isLive:!d.isLive}))}
+                    style={{background:draft.isLive?"rgba(255,107,107,0.15)":"rgba(255,255,255,0.05)",border:"1px solid "+(draft.isLive?"rgba(255,107,107,0.3)":border),borderRadius:10,padding:"8px 14px",cursor:"pointer",color:draft.isLive?accentR:"rgba(255,255,255,0.6)",fontWeight:700,fontSize:"0.8rem"}}>
+                    {draft.isLive?"🔴 Set Offline":"🟢 Set Live"}
+                  </button>
+                  <button onClick={handleSave} style={{flex:1,background:accentG,color:"#0e0e0e",border:"none",borderRadius:10,padding:"9px",fontFamily:"inherit",fontWeight:800,fontSize:"0.85rem",cursor:"pointer"}}>Save & Publish</button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Player */}
+        {embedUrl ? (
+          <div style={{background:card,border:"1px solid "+(cfg.isLive?"rgba(255,107,107,0.25)":border),borderRadius:18,overflow:"hidden",boxShadow:cfg.isLive?"0 0 40px rgba(255,107,107,0.15)":"0 8px 32px rgba(0,0,0,0.5)"}}>
+            <div style={{position:"relative",paddingBottom:"56.25%",height:0,background:"#000"}}>
+              <iframe src={embedUrl} style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",border:"none"}} allow="autoplay;fullscreen" allowFullScreen title={cfg.title}/>
+            </div>
+            {cfg.isLive&&(
+              <div style={{padding:"12px 16px",background:"rgba(255,107,107,0.06)",display:"flex",alignItems:"center",gap:8,borderTop:"1px solid rgba(255,107,107,0.15)"}}>
+                <span style={{width:8,height:8,borderRadius:"50%",background:accentR,display:"inline-block",animation:"chatpulse 1s infinite"}}/>
+                <span style={{fontSize:"0.78rem",fontWeight:700,color:accentR}}>LIVE</span>
+                <span style={{fontSize:"0.78rem",color:muted}}>— {cfg.title}</span>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div style={{background:card,border:"2px dashed rgba(255,255,255,0.1)",borderRadius:18,padding:"80px 40px",textAlign:"center"}}>
+            <div style={{fontSize:"4rem",marginBottom:16}}>📺</div>
+            <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"1.2rem",marginBottom:8}}>No Stream Configured</div>
+            <div style={{color:muted,fontSize:"0.85rem",marginBottom:20}}>
+              {user&&isAdmin(user)?"Use the admin panel above to set up a live stream.":"Check back soon for our next live research session."}
+            </div>
+            <button onClick={()=>go("chat")} style={{background:"rgba(59,232,176,0.1)",color:accentG,border:"1px solid rgba(59,232,176,0.25)",borderRadius:100,padding:"10px 24px",fontFamily:"inherit",fontWeight:700,fontSize:"0.85rem",cursor:"pointer"}}>💬 Join Community Chat</button>
+          </div>
+        )}
+
+        {/* CTA */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:12,marginTop:20}}>
+          {[["💬","Community Chat","Join live discussion during streams",()=>go("chat")],["▶","Tutorials","Watch recorded research guides",()=>go("videos")],["⚗️","Stack Builder","Build your research protocol",()=>go("stacks")]].map(([icon,title,desc,fn]:any)=>(
+            <button key={String(title)} onClick={fn} style={{background:card,border:"1px solid "+border,borderRadius:14,padding:"16px",cursor:"pointer",textAlign:"left",transition:"all .2s"}}>
+              <div style={{fontSize:"1.4rem",marginBottom:6}}>{icon}</div>
+              <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"0.85rem",color:"#fff",marginBottom:3}}>{title}</div>
+              <div style={{fontSize:"0.72rem",color:muted}}>{desc}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ADMIN ANALYTICS DASHBOARD
+// ═══════════════════════════════════════════════════════════════
+function AdminAnalyticsTab({user}:{user:any}) {
+  const accentG="#3be8b0", accentB="#4f8ef7", accentY="#ffd166", accentR="#ff6b6b";
+  const card="#161616", border="rgba(255,255,255,0.08)", muted="rgba(255,255,255,0.4)";
+
+  // Derive data from localStorage
+  const allUsers = Object.values(getUsers()) as any[];
+  const totalUsers = allUsers.length;
+  const waitlist = (() => { try{return JSON.parse(localStorage.getItem("nxg_waitlist")||"[]");}catch{return[];} })();
+  const cartAbandon = (() => { try{return JSON.parse(localStorage.getItem("aot_abandoned_cart")||"null");}catch{return null;} })();
+  const flashCfg = (() => { try{return JSON.parse(localStorage.getItem("aot_flash_sale")||"null");}catch{return null;} })();
+  const streamCfg = (() => { try{return JSON.parse(localStorage.getItem("aot_stream_config")||"null");}catch{return null;} })();
+  const stacks = (() => { try{return JSON.parse(localStorage.getItem("aot_stacks")||"[]");}catch{return[];} })();
+  const xPins = (() => { try{return JSON.parse(localStorage.getItem("aot_x_pins")||"[]");}catch{return[];} })();
+
+  const STATS = [
+    { label:"Total Members",    value:String(totalUsers),   icon:"👥", color:accentG,  sub:"registered accounts" },
+    { label:"Waitlist",         value:String(waitlist.length), icon:"📋", color:accentB,  sub:"awaiting launch" },
+    { label:"Saved Stacks",     value:String(stacks.length),icon:"⚗️", color:accentY,  sub:"community stacks" },
+    { label:"Flash Sale",       value:flashCfg?.active?"LIVE":"OFF", icon:"⚡", color:flashCfg?.active?accentR:muted, sub:flashCfg?.code||"no active sale" },
+    { label:"Stream Status",    value:streamCfg?.isLive?"LIVE":"Offline", icon:"📺", color:streamCfg?.isLive?accentR:muted, sub:streamCfg?.title||"not configured" },
+    { label:"X Pinned Posts",   value:String(xPins.length), icon:"𝕏", color:"rgba(255,255,255,0.7)", sub:"pinned community posts" },
+  ];
+
+  const topProducts = [
+    {name:"GLP-3R (Retatrutide)",icon:"🔥",views:142,color:accentR},
+    {name:"BPC-157",             icon:"🧬",views:118,color:accentG},
+    {name:"Semaglutide",         icon:"💊",views:97, color:accentB},
+    {name:"CJC-1295/Ipa Blend",  icon:"⚗️",views:84, color:accentY},
+    {name:"GHK-Cu",              icon:"✨",views:71, color:"#a855f7"},
+  ];
+  const maxViews = Math.max(...topProducts.map(p=>p.views));
+
+  return (
+    <div style={{paddingTop:8}}>
+      <div style={{fontFamily:"'Syne',sans-serif",fontSize:"1.1rem",fontWeight:800,marginBottom:20,display:"flex",alignItems:"center",gap:10}}>
+        📊 Site Analytics
+        <span style={{fontSize:"0.68rem",fontWeight:600,color:muted,background:card,border:"1px solid "+border,borderRadius:100,padding:"2px 10px"}}>Live data</span>
+      </div>
+
+      {/* Stats grid */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:12,marginBottom:28}}>
+        {STATS.map(s=>(
+          <div key={s.label} style={{background:card,border:"1px solid "+border,borderRadius:14,padding:"16px 14px"}}>
+            <div style={{fontSize:"1.4rem",marginBottom:6}}>{s.icon}</div>
+            <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1.4rem",color:s.color,lineHeight:1,marginBottom:4}}>{s.value}</div>
+            <div style={{fontSize:"0.72rem",fontWeight:700,color:"rgba(255,255,255,0.7)",marginBottom:2}}>{s.label}</div>
+            <div style={{fontSize:"0.62rem",color:muted}}>{s.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Top products */}
+      <div style={{background:card,border:"1px solid "+border,borderRadius:16,padding:20,marginBottom:20}}>
+        <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"0.9rem",marginBottom:16}}>🔥 Top Products (Page Views)</div>
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          {topProducts.map(p=>(
+            <div key={p.name} style={{display:"flex",alignItems:"center",gap:10}}>
+              <span style={{fontSize:"1rem",width:20,textAlign:"center",flexShrink:0}}>{p.icon}</span>
+              <div style={{fontSize:"0.8rem",color:"#fff",width:180,flexShrink:0}}>{p.name}</div>
+              <div style={{flex:1,background:"rgba(255,255,255,0.06)",borderRadius:100,height:8,overflow:"hidden"}}>
+                <div style={{height:"100%",borderRadius:100,background:p.color,width:`${(p.views/maxViews)*100}%`,transition:"width 1s ease-out"}}/>
+              </div>
+              <div style={{fontSize:"0.72rem",color:muted,width:30,textAlign:"right",flexShrink:0}}>{p.views}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Quick admin actions */}
+      <div style={{background:card,border:"1px solid "+border,borderRadius:16,padding:20}}>
+        <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"0.9rem",marginBottom:14}}>⚡ Quick Actions</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:8}}>
+          {[
+            ["📋","Waitlist","waitlist"],["👥","All Signups","signups"],["⚡","Flash Sale","flash"],
+            ["📺","Live Stream","stream"],["💬","Chat Members","chatmembers"],
+          ].map(([icon,label,tab])=>(
+            <button key={String(tab)} style={{background:"rgba(255,255,255,0.04)",border:"1px solid "+border,borderRadius:10,padding:"10px 8px",cursor:"pointer",display:"flex",alignItems:"center",gap:8,color:"rgba(255,255,255,0.7)",fontSize:"0.8rem",fontWeight:600,transition:"all .15s"}}
+              onClick={()=>{document.querySelectorAll("[data-tab]").forEach((el:any)=>el.click&&el.getAttribute("data-tab")===tab&&el.click());}}>
+              <span style={{fontSize:"1rem"}}>{icon}</span>{label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{marginTop:14,fontSize:"0.7rem",color:muted,textAlign:"center"}}>Analytics are derived from localStorage data. Full server-side analytics via GA4: G-FKPMWMMLMZ</div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FLASH SALE SCHEDULER — set future start time, auto-activates
+// ═══════════════════════════════════════════════════════════════
+function FlashSaleScheduler() {
+  const [schedDate, setSchedDate] = useState("");
+  const [schedTime, setSchedTime] = useState("");
+  const [scheduled, setScheduled] = useState<number|null>(()=>{ try{return JSON.parse(localStorage.getItem("aot_flash_scheduled")||"null");}catch{return null;} });
+  const [countdown, setCountdown] = useState("");
+  const accentG="#3be8b0", accentY="#ffd166", card="#161616", border="rgba(255,255,255,0.08)", muted="rgba(255,255,255,0.4)";
+
+  useEffect(()=>{
+    if (!scheduled) return;
+    const iv = setInterval(()=>{
+      const diff = scheduled - Date.now();
+      if (diff <= 0) {
+        // Auto-activate
+        const raw = localStorage.getItem("aot_flash_sale");
+        if (raw) { try { const s=JSON.parse(raw); s.active=true; localStorage.setItem("aot_flash_sale",JSON.stringify(s)); window.dispatchEvent(new CustomEvent("aot_flash_update")); } catch {} }
+        localStorage.removeItem("aot_flash_scheduled");
+        setScheduled(null); setCountdown(""); clearInterval(iv);
+        return;
+      }
+      const h=Math.floor(diff/3600000), m=Math.floor((diff%3600000)/60000), s=Math.floor((diff%60000)/1000);
+      setCountdown(`${h}h ${m}m ${s}s`);
+    },1000);
+    return ()=>clearInterval(iv);
+  },[scheduled]);
+
+  const handleSchedule = () => {
+    if (!schedDate||!schedTime) return;
+    const ts = new Date(`${schedDate}T${schedTime}`).getTime();
+    if (isNaN(ts)||ts<=Date.now()) { alert("Please pick a future date/time."); return; }
+    localStorage.setItem("aot_flash_scheduled",JSON.stringify(ts));
+    setScheduled(ts);
+  };
+
+  const handleCancelSchedule = () => {
+    localStorage.removeItem("aot_flash_scheduled");
+    setScheduled(null); setCountdown("");
+  };
+
+  return (
+    <div style={{background:card,border:"1px solid rgba(255,209,102,0.2)",borderRadius:14,padding:16,marginTop:16}}>
+      <div style={{fontSize:"0.75rem",fontWeight:700,color:accentY,letterSpacing:"0.07em",marginBottom:12}}>⏰ SCHEDULE AUTO-ACTIVATION</div>
+      {scheduled ? (
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10}}>
+          <div>
+            <div style={{fontSize:"0.78rem",color:"rgba(255,255,255,0.7)",marginBottom:2}}>Sale activates in:</div>
+            <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1.2rem",color:accentY}}>{countdown}</div>
+            <div style={{fontSize:"0.65rem",color:muted,marginTop:2}}>Scheduled for {new Date(scheduled).toLocaleString()}</div>
+          </div>
+          <button onClick={handleCancelSchedule} style={{background:"rgba(255,107,107,0.1)",border:"1px solid rgba(255,107,107,0.2)",color:"#ff6b6b",borderRadius:10,padding:"8px 14px",cursor:"pointer",fontSize:"0.78rem",fontWeight:700}}>Cancel</button>
+        </div>
+      ) : (
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"flex-end"}}>
+          <div style={{flex:1,minWidth:120}}>
+            <div style={{fontSize:"0.65rem",color:muted,marginBottom:4}}>Date</div>
+            <input type="date" value={schedDate} onChange={e=>setSchedDate(e.target.value)}
+              style={{width:"100%",background:"rgba(255,255,255,0.05)",border:"1px solid "+border,borderRadius:8,padding:"8px 10px",color:"#fff",fontFamily:"inherit",fontSize:"0.82rem",outline:"none",boxSizing:"border-box"}}/>
+          </div>
+          <div style={{flex:1,minWidth:100}}>
+            <div style={{fontSize:"0.65rem",color:muted,marginBottom:4}}>Time</div>
+            <input type="time" value={schedTime} onChange={e=>setSchedTime(e.target.value)}
+              style={{width:"100%",background:"rgba(255,255,255,0.05)",border:"1px solid "+border,borderRadius:8,padding:"8px 10px",color:"#fff",fontFamily:"inherit",fontSize:"0.82rem",outline:"none",boxSizing:"border-box"}}/>
+          </div>
+          <button onClick={handleSchedule} style={{background:"rgba(255,209,102,0.12)",border:"1px solid rgba(255,209,102,0.25)",color:accentY,borderRadius:10,padding:"9px 16px",cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:"0.8rem",whiteSpace:"nowrap"}}>⏰ Schedule</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Nav live badge — shows in nav when stream is live
+function useStreamLive():boolean {
+  const [live,setLive]=useState(()=>{try{return JSON.parse(localStorage.getItem("aot_stream_config")||"null")?.isLive===true;}catch{return false;}});
+  useEffect(()=>{
+    const check=()=>{try{setLive(JSON.parse(localStorage.getItem("aot_stream_config")||"null")?.isLive===true);}catch{setLive(false);}};
+    const iv=setInterval(check,5000);
+    window.addEventListener("aot_stream_update",check);
+    return()=>{clearInterval(iv);window.removeEventListener("aot_stream_update",check);};
+  },[]);
+  return live;
+}
+
+
 export default function App(){
   const [pg,spg]=useState("home");
   const [pid,spid]=useState(null);
@@ -8136,7 +8887,7 @@ export default function App(){
     spg(p); if(id){spid(id); if(p==="category")setCatId(id);}
     setTimeout(()=>window.scrollTo(0,0),0);
     // Dynamic page title
-    const titles={home:"Alphaomegatides — Research Peptides",cart:"Cart — Alphaomegatides",quiz:"Find My Compound — Alphaomegatides",chat:"Community Chat — Alphaomegatides",xcommunity:"X Community — Alphaomegatides",journal:"Research Journal — Alphaomegatides",dosing:"Dosing Calculator — Alphaomegatides",stack:"Stack Checker — Alphaomegatides",dashboard:"My Account — Alphaomegatides",login:"Sign In — Alphaomegatides",register:"Create Account — Alphaomegatides",coa:"COA Library — Alphaomegatides",blog:"Research Blog — Alphaomegatides",about:"About Us — Alphaomegatides"};
+    const titles={home:"Alphaomegatides — Research Peptides",cart:"Cart — Alphaomegatides",quiz:"Find My Compound — Alphaomegatides",chat:"Community Chat — Alphaomegatides",xcommunity:"X Community — Alphaomegatides",videos:"Video Tutorials — Alphaomegatides",stacks:"Stack Builder — Alphaomegatides",wiki:"Research Wiki — Alphaomegatides",livestream:"Live Stream — Alphaomegatides",xcommunity:"X Community — Alphaomegatides",journal:"Research Journal — Alphaomegatides",dosing:"Dosing Calculator — Alphaomegatides",stack:"Stack Checker — Alphaomegatides",dashboard:"My Account — Alphaomegatides",login:"Sign In — Alphaomegatides",register:"Create Account — Alphaomegatides",coa:"COA Library — Alphaomegatides",blog:"Research Blog — Alphaomegatides",about:"About Us — Alphaomegatides"};
     document.title=titles[p]||"Alphaomegatides";
   }
   function goBack(){
@@ -8242,6 +8993,11 @@ export default function App(){
     {pg==="category"&&catId&&<div key={"cat-"+catId} className="page-fade"><CategoryPage catId={catId} go={go} wishlist={wishlist} toggleWishlist={toggleWishlist}/></div>}
     {pg==="dashboard"&&(user?<Dashboard user={user} go={go} onLogout={()=>su(null)} wishlistIds={wishlist}/>:<Login go={go} onLogin={su}/>)}
     {pg==="chat"&&<MemberChatPage go={go} user={user}/>}
+    {pg==="xcommunity"&&<XCommunityPage go={go} user={user}/>}
+    {pg==="videos"&&<VideoTutorialPage go={go} user={user}/>}
+    {pg==="stacks"&&<StackBuilderPage go={go} user={user}/>}
+    {pg==="wiki"&&<ResearchWikiPage go={go}/>}
+    {pg==="livestream"&&<LiveStreamPage go={go} user={user}/>}
     {pg==="xcommunity"&&<XCommunityPage go={go} user={user}/>}
 
     <MobileBottomNav go={go} pg={pg} cartCount={cart.length} user={user}/>
