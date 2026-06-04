@@ -7623,8 +7623,10 @@ function getFlashSale(): FlashSale | null {
 
 function saveFlashSale(sale: FlashSale) {
   try { localStorage.setItem(FLASH_KEY, JSON.stringify(sale)); } catch {}
-  // Notify other tabs
+  // Notify other tabs via storage event
   try { localStorage.setItem("aot_flash_ping", String(Date.now())); } catch {}
+  // Notify SAME tab via custom event (StorageEvent doesn't fire on same tab)
+  try { window.dispatchEvent(new CustomEvent("aot_flash_update")); } catch {}
 }
 
 // The sitewide banner rendered at the top of the page
@@ -7633,14 +7635,34 @@ function FlashSaleBanner() {
   const [dismissed, setDismissed] = useState(false);
   const [timeLeft, setTimeLeft] = useState("");
 
+  const load = () => {
+    setSale(getFlashSale());
+    // Re-check dismissed state (cleared on save)
+    try {
+      const d = sessionStorage.getItem("aot_flash_dismissed");
+      if (!d) setDismissed(false);
+    } catch {}
+  };
+
+  const handleDismiss = () => {
+    setDismissed(true);
+    try { sessionStorage.setItem("aot_flash_dismissed", "1"); } catch {}
+  };
+
   const load = () => setSale(getFlashSale());
 
   useEffect(() => {
     load();
-    const iv = setInterval(load, 5000);
+    const iv = setInterval(load, 2000);
     const onStore = (e: StorageEvent) => { if(e.key==="aot_flash_ping") load(); };
+    const onCustom = () => load();
     window.addEventListener("storage", onStore);
-    return () => { clearInterval(iv); window.removeEventListener("storage", onStore); };
+    window.addEventListener("aot_flash_update", onCustom);
+    return () => {
+      clearInterval(iv);
+      window.removeEventListener("storage", onStore);
+      window.removeEventListener("aot_flash_update", onCustom);
+    };
   }, []);
 
   // Countdown timer
@@ -7700,7 +7722,7 @@ function FlashSaleBanner() {
           <span style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"0.88rem",color:col.accent,letterSpacing:"0.03em"}}>{timeLeft}</span>
         </span>
       )}
-      <button onClick={()=>setDismissed(true)}
+      <button onClick={handleDismiss}
         style={{position:"absolute" as const,right:12,top:"50%",transform:"translateY(-50%)",
           background:"rgba(255,255,255,0.15)",border:"none",color:"#fff",
           borderRadius:"50%",width:22,height:22,cursor:"pointer",fontSize:"0.8rem",
@@ -7721,6 +7743,8 @@ function FlashSaleAdmin() {
 
   const handleSave = () => {
     saveFlashSale(sale);
+    // Clear dismissed flag so banner reappears immediately on same tab
+    try { sessionStorage.removeItem("aot_flash_dismissed"); } catch {}
     setSaved(true);
     setTimeout(()=>setSaved(false), 2500);
   };
