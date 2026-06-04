@@ -903,26 +903,31 @@ function Nav({user,go,onLogout,cartCount}){
         <span style={{display:"block",width:22,height:2,background:open?C.b:C.ink,borderRadius:2,transition:"all .25s",transform:open?"rotate(-45deg) translate(5px,-5px)":"none"}}/>
       </button>
 
-      {/* CENTER — logo: α · DNA horizontal · Ω */}
-      <div onClick={()=>{go("home");close();}} style={{cursor:"pointer",position:"absolute",left:"50%",transform:"translateX(-50%)",display:"flex",alignItems:"center",gap:4}}>
-        <span style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"0.95rem",color:"#ff6b6b",lineHeight:1}}>α</span>
-        <svg width="60" height="22" viewBox="0 0 14 28" fill="none" style={{transform:"rotate(90deg)"}}>
-          <defs><linearGradient id="navdna" x1="0" y1="0" x2="0" y2="28" gradientUnits="userSpaceOnUse"><stop offset="0%" stopColor="#ff6b6b"/><stop offset="50%" stopColor="#a855f7"/><stop offset="100%" stopColor="#3be8b0"/></linearGradient></defs>
-          <path d="M3 0 C1 4,1 8,3 12 C5 16,6 20,4 24 C3 26,2 27,2 28" stroke="url(#navdna)" strokeWidth="1.8" fill="none" strokeLinecap="round"/>
-          <path d="M11 0 C13 4,13 8,11 12 C9 16,8 20,10 24 C11 26,12 27,12 28" stroke="url(#navdna)" strokeWidth="1.8" fill="none" strokeLinecap="round"/>
-          <line x1="3" y1="0" x2="11" y2="0" stroke="rgba(255,107,107,0.6)" strokeWidth="1.4" strokeLinecap="round"/>
-          <line x1="2" y1="7" x2="12" y2="7" stroke="rgba(168,85,247,0.5)" strokeWidth="1.4" strokeLinecap="round"/>
-          <line x1="4" y1="14" x2="10" y2="14" stroke="rgba(100,150,255,0.5)" strokeWidth="1.4" strokeLinecap="round"/>
-          <line x1="3" y1="21" x2="11" y2="21" stroke="rgba(59,232,176,0.6)" strokeWidth="1.4" strokeLinecap="round"/>
-          <circle cx="3" cy="0" r="1.8" fill="#ff6b6b" opacity="0.9"/>
-          <circle cx="11" cy="0" r="1.8" fill="#ff6b6b" opacity="0.9"/>
-          <circle cx="4" cy="14" r="1.6" fill="#a855f7" opacity="0.85"/>
-          <circle cx="10" cy="14" r="1.6" fill="#a855f7" opacity="0.85"/>
-          <circle cx="3" cy="28" r="1.8" fill="#3be8b0" opacity="0.9"/>
-          <circle cx="11" cy="28" r="1.8" fill="#3be8b0" opacity="0.9"/>
+      {/* CENTER — compact combined αΩ wordmark */}
+      <div onClick={()=>{go("home");close();}} style={{cursor:"pointer",position:"absolute",left:"50%",transform:"translateX(-50%)",display:"flex",alignItems:"center",gap:0,userSelect:"none" as const}}>
+        <span style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1.45rem",color:"#ff6b6b",lineHeight:1,textShadow:"0 0 18px rgba(255,107,107,0.55)",letterSpacing:"-0.02em"}}>α</span>
+        {/* Inline mini DNA — vertical bars only, clean */}
+        <svg width="18" height="28" viewBox="0 0 18 28" fill="none" style={{margin:"0 1px",flexShrink:0}}>
+          <defs><linearGradient id="navdna2" x1="0" y1="0" x2="0" y2="28" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#ff6b6b"/><stop offset="50%" stopColor="#a855f7"/><stop offset="100%" stopColor="#3be8b0"/>
+          </linearGradient></defs>
+          {/* Two vertical strands */}
+          <path d="M4 0 C2 5,2 10,4 14 C6 18,7 22,5 27" stroke="url(#navdna2)" strokeWidth="2" fill="none" strokeLinecap="round"/>
+          <path d="M14 0 C16 5,16 10,14 14 C12 18,11 22,13 27" stroke="url(#navdna2)" strokeWidth="2" fill="none" strokeLinecap="round"/>
+          {/* Rungs */}
+          <line x1="4" y1="0"  x2="14" y2="0"  stroke="rgba(255,107,107,0.7)" strokeWidth="1.8" strokeLinecap="round"/>
+          <line x1="3" y1="9"  x2="15" y2="9"  stroke="rgba(168,85,247,0.7)"  strokeWidth="1.8" strokeLinecap="round"/>
+          <line x1="4" y1="18" x2="14" y2="18" stroke="rgba(59,232,176,0.75)" strokeWidth="1.8" strokeLinecap="round"/>
+          <line x1="5" y1="27" x2="13" y2="27" stroke="rgba(59,232,176,0.6)"  strokeWidth="1.8" strokeLinecap="round"/>
+          {/* Node dots */}
+          <circle cx="4"  cy="0"  r="2.2" fill="#ff6b6b"/>
+          <circle cx="14" cy="0"  r="2.2" fill="#ff6b6b"/>
+          <circle cx="4"  cy="18" r="2"   fill="#a855f7" opacity="0.9"/>
+          <circle cx="14" cy="18" r="2"   fill="#a855f7" opacity="0.9"/>
+          <circle cx="5"  cy="27" r="2.2" fill="#3be8b0"/>
+          <circle cx="13" cy="27" r="2.2" fill="#3be8b0"/>
         </svg>
-        <span style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"0.95rem",color:"#3be8b0",lineHeight:1}}>Ω</span>
-        
+        <span style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1.45rem",color:"#3be8b0",lineHeight:1,textShadow:"0 0 18px rgba(59,232,176,0.55)",letterSpacing:"-0.02em"}}>Ω</span>
       </div>
 
       {/* RIGHT — cart + account icon */}
@@ -947,10 +952,21 @@ function Nav({user,go,onLogout,cartCount}){
       {/* Drawer header */}
       <div style={{padding:"20px 20px 16px",borderBottom:"1px solid rgba(255,255,255,0.07)",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
         <div style={{display:"flex",alignItems:"center",gap:5}}>
-          <span style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"0.95rem",color:"#ff6b6b",lineHeight:1,textShadow:"0 0 10px rgba(255,107,107,0.4)"}}>α</span>
-          <svg width="60" height="22" viewBox="0 0 14 28" fill="none" style={{transform:"rotate(90deg)"}}><defs><linearGradient id="drawerdna" x1="0" y1="0" x2="0" y2="28" gradientUnits="userSpaceOnUse"><stop offset="0%" stopColor="#ff6b6b"/><stop offset="50%" stopColor="#a855f7"/><stop offset="100%" stopColor="#3be8b0"/></linearGradient></defs><path d="M3 0 C1 4,1 8,3 12 C5 16,6 20,4 24 C3 26,2 27,2 28" stroke="url(#drawerdna)" strokeWidth="1.8" fill="none" strokeLinecap="round"/><path d="M11 0 C13 4,13 8,11 12 C9 16,8 20,10 24 C11 26,12 27,12 28" stroke="url(#drawerdna)" strokeWidth="1.8" fill="none" strokeLinecap="round"/><line x1="3" y1="0" x2="11" y2="0" stroke="rgba(255,107,107,0.6)" strokeWidth="1.4" strokeLinecap="round"/><line x1="2" y1="7" x2="12" y2="7" stroke="rgba(168,85,247,0.5)" strokeWidth="1.4" strokeLinecap="round"/><line x1="4" y1="14" x2="10" y2="14" stroke="rgba(100,150,255,0.5)" strokeWidth="1.4" strokeLinecap="round"/><line x1="3" y1="21" x2="11" y2="21" stroke="rgba(59,232,176,0.6)" strokeWidth="1.4" strokeLinecap="round"/><circle cx="3" cy="0" r="1.8" fill="#ff6b6b" opacity="0.9"/><circle cx="11" cy="0" r="1.8" fill="#ff6b6b" opacity="0.9"/><circle cx="4" cy="14" r="1.6" fill="#a855f7" opacity="0.85"/><circle cx="10" cy="14" r="1.6" fill="#a855f7" opacity="0.85"/><circle cx="3" cy="28" r="1.8" fill="#3be8b0" opacity="0.9"/><circle cx="11" cy="28" r="1.8" fill="#3be8b0" opacity="0.9"/></svg>
-          <span style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"0.95rem",color:"#3be8b0",lineHeight:1,textShadow:"0 0 10px rgba(59,232,176,0.4)"}}>Ω</span>
-          <span style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"0.72rem",color:"rgba(255,255,255,0.5)",letterSpacing:"0.08em",marginLeft:4}}>Alphaomegatides</span>
+          <span style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1.3rem",color:"#ff6b6b",lineHeight:1,textShadow:"0 0 14px rgba(255,107,107,0.5)",letterSpacing:"-0.02em"}}>α</span>
+          <svg width="16" height="26" viewBox="0 0 18 28" fill="none" style={{margin:"0 1px",flexShrink:0}}>
+            <defs><linearGradient id="drawerdna2" x1="0" y1="0" x2="0" y2="28" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#ff6b6b"/><stop offset="50%" stopColor="#a855f7"/><stop offset="100%" stopColor="#3be8b0"/>
+            </linearGradient></defs>
+            <path d="M4 0 C2 5,2 10,4 14 C6 18,7 22,5 27" stroke="url(#drawerdna2)" strokeWidth="2" fill="none" strokeLinecap="round"/>
+            <path d="M14 0 C16 5,16 10,14 14 C12 18,11 22,13 27" stroke="url(#drawerdna2)" strokeWidth="2" fill="none" strokeLinecap="round"/>
+            <line x1="4" y1="0"  x2="14" y2="0"  stroke="rgba(255,107,107,0.7)" strokeWidth="1.8" strokeLinecap="round"/>
+            <line x1="3" y1="9"  x2="15" y2="9"  stroke="rgba(168,85,247,0.7)"  strokeWidth="1.8" strokeLinecap="round"/>
+            <line x1="4" y1="18" x2="14" y2="18" stroke="rgba(59,232,176,0.75)" strokeWidth="1.8" strokeLinecap="round"/>
+            <circle cx="4" cy="0" r="2.2" fill="#ff6b6b"/><circle cx="14" cy="0" r="2.2" fill="#ff6b6b"/>
+            <circle cx="4" cy="18" r="2" fill="#a855f7" opacity="0.9"/><circle cx="14" cy="18" r="2" fill="#a855f7" opacity="0.9"/>
+          </svg>
+          <span style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1.3rem",color:"#3be8b0",lineHeight:1,textShadow:"0 0 14px rgba(59,232,176,0.5)",letterSpacing:"-0.02em"}}>Ω</span>
+          <span style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"0.68rem",color:"rgba(255,255,255,0.45)",letterSpacing:"0.1em",marginLeft:6,textTransform:"uppercase" as const}}>Alphaomegatides</span>
         </div>
         <button onClick={close} style={{background:"none",border:"none",fontSize:"1.2rem",cursor:"pointer",color:"rgba(255,255,255,0.4)",padding:4,minHeight:"auto"}}>✕</button>
       </div>
@@ -1048,8 +1064,17 @@ function buildShopifyCartUrl(cartItems:{id:string,name:string,selectedSize:strin
 }
 
 function shopifyCheckout(cartItems:{id:string,name:string,selectedSize:string,selectedPrice:string,quantity?:number}[]){
-  // Shopify disabled — no-op, payments handled via XRP/alternative methods
-  console.log("Shopify checkout disabled. Use XRP payment in cart.");
+  const handleMap:Record<string,string> = {
+    glp3r:"glp-3-r", glp2t:"glp-2-t", glp1:"glp-1",
+    bpc157:"bpc-157", tb500:"tb-500",
+    cjc1295:"cjc-1295", cjcipa:"cjc-1295-ipamorelin-blend",
+    ipamorlin:"ipamorelin", tesamorlin:"tesamorlin", igf1lr3:"igf-1-lr3",
+    ghkcu:"ghk-cu", glow:"glow-complex",
+    nad:"nad", motsc:"mots-c", glutathione:"glutathione", ss31:"ss-31",
+    selank:"selank", semax:"semax", dsip:"dsip", mt2:"mt2",
+    reconst:"reconstitution-solution",
+  };
+  console.log("Shopify checkout disabled.");
 }
 
 
@@ -2457,6 +2482,195 @@ function CategoryPage({catId,go,wishlist=[],toggleWishlist=()=>{}}){
 
 // ── HOME ────────────────────────────────────────────
 
+// ── ANIMATED HERO LOGO — α + DNA + Ω converge into one mark ──
+function AnimatedHeroLogo() {
+  const [phase, setPhase] = React.useState<"enter"|"assemble"|"idle">("enter");
+
+  React.useEffect(() => {
+    // Phase 1: pieces fly in (0 → 900ms)
+    // Phase 2: lock together + glow burst (900ms → 1400ms)
+    // Phase 3: idle breathe (1400ms+)
+    const t1 = setTimeout(() => setPhase("assemble"), 900);
+    const t2 = setTimeout(() => setPhase("idle"), 1400);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, []);
+
+  const assembled = phase === "assemble" || phase === "idle";
+  const idle      = phase === "idle";
+
+  const trans = "transform 0.55s cubic-bezier(0.34,1.56,0.64,1), opacity 0.45s ease";
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:10,marginBottom:16,position:"relative",zIndex:1}}>
+      <style>{`
+        @keyframes logoBreathe {
+          0%,100% { transform: scale(1);    filter: drop-shadow(0 0 28px rgba(168,85,247,0.35)); }
+          50%      { transform: scale(1.03); filter: drop-shadow(0 0 52px rgba(168,85,247,0.65)); }
+        }
+        @keyframes glowBurst {
+          0%   { opacity: 0;   transform: scale(0.6); }
+          40%  { opacity: 0.6; transform: scale(1.0); }
+          100% { opacity: 0;   transform: scale(1.5); }
+        }
+        @keyframes alphaPulse {
+          0%,100% { text-shadow: 0 0 40px rgba(255,107,107,0.5), 0 0 80px rgba(255,107,107,0.2); }
+          50%      { text-shadow: 0 0 70px rgba(255,107,107,0.9), 0 0 120px rgba(255,107,107,0.4); }
+        }
+        @keyframes omegaPulse {
+          0%,100% { text-shadow: 0 0 40px rgba(59,232,176,0.5), 0 0 80px rgba(59,232,176,0.2); }
+          50%      { text-shadow: 0 0 70px rgba(59,232,176,0.9), 0 0 120px rgba(59,232,176,0.4); }
+        }
+        @keyframes dnaRotate {
+          0%   { transform: rotate(90deg) scale(1); }
+          50%  { transform: rotate(90deg) scale(1.04); }
+          100% { transform: rotate(90deg) scale(1); }
+        }
+        @keyframes siteNameSlide {
+          0%   { opacity: 0; transform: translateY(12px); letter-spacing: 0.08em; }
+          100% { opacity: 1; transform: translateY(0);    letter-spacing: 0.22em; }
+        }
+      `}</style>
+
+      {/* THE COMBINED MARK */}
+      <div style={{
+        position:"relative",
+        display:"flex",
+        alignItems:"center",
+        justifyContent:"center",
+        animation: idle ? "logoBreathe 3.5s ease-in-out infinite" : "none",
+      }}>
+
+        {/* Glow burst on assembly */}
+        {assembled && (
+          <div style={{
+            position:"absolute",
+            inset:-60,
+            borderRadius:"50%",
+            background:"radial-gradient(circle, rgba(168,85,247,0.35) 0%, transparent 70%)",
+            animation:"glowBurst 0.7s ease-out forwards",
+            pointerEvents:"none",
+          }}/>
+        )}
+
+        {/* α — slides in from LEFT */}
+        <span style={{
+          fontFamily:"'Syne',sans-serif",
+          fontWeight:800,
+          fontSize:"clamp(4.5rem,13vw,8rem)",
+          color:"#ff6b6b",
+          lineHeight:1,
+          display:"block",
+          transition: trans,
+          transform: assembled ? "translateX(0) scale(1)" : "translateX(-180px) scale(0.6)",
+          opacity: assembled ? 1 : 0,
+          animation: idle ? "alphaPulse 3s ease-in-out infinite" : "none",
+          marginRight:-8,
+          position:"relative",
+          zIndex:2,
+        }}>α</span>
+
+        {/* DNA HELIX — drops in from TOP */}
+        <div style={{
+          transition:"transform 0.6s cubic-bezier(0.34,1.4,0.64,1), opacity 0.45s ease",
+          transform: assembled ? "translateY(0) scale(1)" : "translateY(-160px) scale(0.5)",
+          opacity: assembled ? 1 : 0,
+          position:"relative",
+          zIndex:3,
+          flexShrink:0,
+        }}>
+          <svg
+            width="clamp(140px,22vw,220px)"
+            height="clamp(76px,12vw,120px)"
+            viewBox="0 0 44 110"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            style={{
+              display:"block",
+              animation: idle ? "dnaRotate 3.5s ease-in-out infinite" : "none",
+              transform:"rotate(90deg)",
+            }}
+          >
+            <defs>
+              <linearGradient id="herodna5" x1="0" y1="0" x2="0" y2="110" gradientUnits="userSpaceOnUse">
+                <stop offset="0%"   stopColor="#ff6b6b"/>
+                <stop offset="50%"  stopColor="#a855f7"/>
+                <stop offset="100%" stopColor="#3be8b0"/>
+              </linearGradient>
+              <filter id="dnaglow">
+                <feGaussianBlur stdDeviation="1.5" result="blur"/>
+                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+            </defs>
+            <path d="M9 0 C2 14,2 28,9 42 C16 56,19 70,12 84 C8 92,5 100,6 110"
+              stroke="url(#herodna5)" strokeWidth="3.5" fill="none" strokeLinecap="round" filter="url(#dnaglow)"/>
+            <path d="M35 0 C42 14,42 28,35 42 C28 56,25 70,32 84 C36 92,39 100,38 110"
+              stroke="url(#herodna5)" strokeWidth="3.5" fill="none" strokeLinecap="round" filter="url(#dnaglow)"/>
+            <line x1="9"  y1="0"   x2="35" y2="0"   stroke="rgba(255,107,107,0.85)" strokeWidth="2.5" strokeLinecap="round"/>
+            <line x1="5"  y1="20"  x2="39" y2="20"  stroke="rgba(220,80,190,0.7)"  strokeWidth="2.5" strokeLinecap="round"/>
+            <line x1="12" y1="40"  x2="32" y2="40"  stroke="rgba(168,85,247,0.8)"  strokeWidth="2.5" strokeLinecap="round"/>
+            <line x1="13" y1="60"  x2="31" y2="60"  stroke="rgba(100,150,255,0.75)" strokeWidth="2.5" strokeLinecap="round"/>
+            <line x1="9"  y1="80"  x2="35" y2="80"  stroke="rgba(59,220,200,0.8)"  strokeWidth="2.5" strokeLinecap="round"/>
+            <line x1="7"  y1="100" x2="37" y2="100" stroke="rgba(59,232,176,0.75)" strokeWidth="2.5" strokeLinecap="round"/>
+            <circle cx="9"  cy="0"   r="6" fill="#ff6b6b" opacity="0.95"/>
+            <circle cx="35" cy="0"   r="6" fill="#ff6b6b" opacity="0.95"/>
+            <circle cx="5"  cy="20"  r="4" fill="rgba(220,80,190,0.8)"/>
+            <circle cx="39" cy="20"  r="4" fill="rgba(220,80,190,0.8)"/>
+            <circle cx="12" cy="40"  r="5" fill="#a855f7" opacity="0.95"/>
+            <circle cx="32" cy="40"  r="5" fill="#a855f7" opacity="0.95"/>
+            <circle cx="13" cy="60"  r="4" fill="rgba(100,150,255,0.85)"/>
+            <circle cx="31" cy="60"  r="4" fill="rgba(100,150,255,0.85)"/>
+            <circle cx="9"  cy="80"  r="6" fill="#3be8b0" opacity="0.95"/>
+            <circle cx="35" cy="80"  r="6" fill="#3be8b0" opacity="0.95"/>
+            <circle cx="7"  cy="100" r="4" fill="rgba(59,232,176,0.8)"/>
+            <circle cx="37" cy="100" r="4" fill="rgba(59,232,176,0.8)"/>
+          </svg>
+        </div>
+
+        {/* Ω — slides in from RIGHT */}
+        <span style={{
+          fontFamily:"'Syne',sans-serif",
+          fontWeight:800,
+          fontSize:"clamp(4.5rem,13vw,8rem)",
+          color:"#3be8b0",
+          lineHeight:1,
+          display:"block",
+          transition: trans,
+          transform: assembled ? "translateX(0) scale(1)" : "translateX(180px) scale(0.6)",
+          opacity: assembled ? 1 : 0,
+          animation: idle ? "omegaPulse 3s ease-in-out infinite 0.3s" : "none",
+          marginLeft:-8,
+          position:"relative",
+          zIndex:2,
+        }}>Ω</span>
+      </div>
+
+      {/* Site name — fades up after logo assembles */}
+      <div style={{
+        fontFamily:"'Syne',sans-serif",
+        fontWeight:800,
+        fontSize:"clamp(1.1rem,3vw,1.5rem)",
+        letterSpacing:"0.22em",
+        textTransform:"uppercase" as const,
+        color:"rgba(255,255,255,0.88)",
+        animation: assembled ? "siteNameSlide 0.6s ease-out both" : "none",
+        opacity: assembled ? 1 : 0,
+      }}>Alphaomegatides</div>
+
+      <div style={{
+        fontFamily:"'Syne',sans-serif",
+        fontStyle:"italic",
+        fontWeight:700,
+        fontSize:"clamp(1rem,3vw,1.6rem)",
+        color:"rgba(255,255,255,0.5)",
+        letterSpacing:"0.02em",
+        textAlign:"center" as const,
+        transition:"opacity 0.6s ease 1.2s",
+        opacity: assembled ? 1 : 0,
+      }}>"Where the tide turns for all."</div>
+    </div>
+  );
+}
+
 // ── PARTICLE FIELD — canvas-based floating particles ──
 function ParticleField() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -2643,32 +2857,8 @@ function Home({go,recentlyViewed=[],wishlist=[],toggleWishlist=()=>{}}){
       {[4,3,5,4,3,5,4,3].map((sz,i)=>(
         <div key={i} style={{position:"absolute",width:sz,height:sz,borderRadius:"50%",background:i%2===0?"#3be8b0":"#4f8ef7",left:`${10+i*11}%`,bottom:`${10+i*8}%`,animation:`floatUp${i%2===0?"":"2"} ${3+i*0.7}s ease-in-out ${i*0.4}s infinite`,pointerEvents:"none",zIndex:0,opacity:0.5}}/>
       ))}
-      {/* Brand name + logo mark */}
-      <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:6,marginBottom:16,position:"relative",zIndex:1}}>
-        <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <span style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"clamp(3.5rem,10vw,6rem)",color:"#ff6b6b",lineHeight:1,textShadow:"0 0 60px rgba(255,107,107,0.45)"}}>α</span>
-          <svg width="260" height="140" viewBox="0 0 44 110" fill="none" xmlns="http://www.w3.org/2000/svg" style={{transform:"rotate(90deg)"}}>
-            <defs><linearGradient id="herodna" x1="0" y1="0" x2="0" y2="110" gradientUnits="userSpaceOnUse"><stop offset="0%" stopColor="#ff6b6b"/><stop offset="50%" stopColor="#a855f7"/><stop offset="100%" stopColor="#3be8b0"/></linearGradient></defs>
-            <path d="M9 0 C2 14,2 28,9 42 C16 56,19 70,12 84 C8 92,5 100,6 110" stroke="url(#herodna)" strokeWidth="3" fill="none" strokeLinecap="round"/>
-            <path d="M35 0 C42 14,42 28,35 42 C28 56,25 70,32 84 C36 92,39 100,38 110" stroke="url(#herodna)" strokeWidth="3" fill="none" strokeLinecap="round"/>
-            <line x1="9"  y1="0"   x2="35" y2="0"   stroke="rgba(255,107,107,0.7)" strokeWidth="2.2" strokeLinecap="round"/>
-            <line x1="5"  y1="20"  x2="39" y2="20"  stroke="rgba(220,80,190,0.55)" strokeWidth="2.2" strokeLinecap="round"/>
-            <line x1="12" y1="40"  x2="32" y2="40"  stroke="rgba(168,85,247,0.65)" strokeWidth="2.2" strokeLinecap="round"/>
-            <line x1="13" y1="60"  x2="31" y2="60"  stroke="rgba(100,150,255,0.6)" strokeWidth="2.2" strokeLinecap="round"/>
-            <line x1="9"  y1="80"  x2="35" y2="80"  stroke="rgba(59,220,200,0.65)" strokeWidth="2.2" strokeLinecap="round"/>
-            <line x1="7"  y1="100" x2="37" y2="100" stroke="rgba(59,232,176,0.6)"  strokeWidth="2.2" strokeLinecap="round"/>
-            <circle cx="9"  cy="0"   r="5" fill="#ff6b6b" opacity="0.92"/>
-            <circle cx="35" cy="0"   r="5" fill="#ff6b6b" opacity="0.92"/>
-            <circle cx="12" cy="40"  r="4" fill="#a855f7" opacity="0.88"/>
-            <circle cx="32" cy="40"  r="4" fill="#a855f7" opacity="0.88"/>
-            <circle cx="9"  cy="80"  r="5" fill="#3be8b0" opacity="0.92"/>
-            <circle cx="35" cy="80"  r="5" fill="#3be8b0" opacity="0.92"/>
-          </svg>
-          <span style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"clamp(3.5rem,10vw,6rem)",color:"#3be8b0",lineHeight:1,textShadow:"0 0 60px rgba(59,232,176,0.45)"}}>Ω</span>
-        </div>
-        <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"clamp(1.1rem,3vw,1.5rem)",letterSpacing:"0.22em",textTransform:"uppercase",color:"rgba(255,255,255,0.82)",marginTop:4}}>Alphaomegatides</div>
-        <div style={{fontFamily:"'Syne',sans-serif",fontStyle:"italic",fontWeight:700,fontSize:"clamp(1.1rem,3.5vw,1.8rem)",color:"rgba(255,255,255,0.55)",letterSpacing:"0.02em",textAlign:"center"}}>"Where the tide turns for all."</div>
-      </div>
+      {/* Brand name + logo mark — animated convergence */}
+      <AnimatedHeroLogo/>
 
       <div style={{display:"inline-flex",alignItems:"center",gap:8,background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.15)",padding:"5px 16px",borderRadius:100,fontSize:"0.77rem",fontWeight:500,color:"rgba(255,255,255,0.7)",marginBottom:16,position:"relative",zIndex:1}}>
         <span style={{width:7,height:7,borderRadius:"50%",background:"#3be8b0",display:"inline-block",animation:"pulseGlow 2s ease-in-out infinite"}}/>
@@ -3788,9 +3978,26 @@ function Dashboard({user,go,onLogout,wishlistIds=[]}){
 
 // ── CHECKOUT PAGE ────────────────────────────────────
 function CheckoutPage({product:p, go, user}){
-  // Shopify removed — redirect to cart with XRP payment
+  const [showModal, setShowModal] = useState(true);
   useEffect(()=>{ go("cart"); },[]);
-  return null;
+
+  return <div style={{paddingTop:70,background:"#0e0e0e",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center"}}>
+    <div style={{textAlign:"center",padding:"40px 24px",maxWidth:440}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginBottom:28}}>
+        <span style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1.6rem",color:"#ff6b6b"}}>α</span>
+        <span style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1.6rem",color:"#3be8b0"}}>Ω</span>
+      </div>
+      <div style={{width:56,height:56,borderRadius:"50%",background:"rgba(59,232,176,0.1)",border:"2px solid rgba(59,232,176,0.3)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 20px",fontSize:"1.6rem"}}>🔒</div>
+      <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1.3rem",marginBottom:10}}>Redirecting to Checkout</div>
+      <p style={{color:"rgba(255,255,255,0.45)",fontSize:"0.88rem",lineHeight:1.7,marginBottom:20}}>administering you to Shopify's seaddress checkout — credit card, Shop Pay, and Apple Pay accepted.</p>
+      <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
+        {[["💳","Credit Card"],["🍎","Apple Pay"],["🛍️","Shop Pay"]].map(([icon,label])=>(
+          <div key={label} style={{background:"#1c1c1c",border:"1px solid rgba(255,255,255,0.08)",borderRadius:10,padding:"8px 16px",fontSize:"0.78rem",color:"rgba(255,255,255,0.4)",display:"flex",alignItems:"center",gap:6}}>{icon} {label}</div>
+        ))}
+      </div>
+      <button onClick={()=>go("cart")} style={{marginTop:24,background:"transparent",color:"rgba(255,255,255,0.3)",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:"0.82rem"}}>← Back to cart</button>
+    </div>
+  </div>;
 }
 
 
