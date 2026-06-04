@@ -3083,7 +3083,7 @@ function Register({go,onLogin}){
     } catch {}
     setOtp(code);
     try {
-      await fetch("/api/send-email", {
+      const res = await fetch("/api/send-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -3091,7 +3091,7 @@ function Register({go,onLogin}){
           data: { to_email: email, to_name: name, code },
         }),
       });
-      return true;
+      return res.ok;
     } catch { return false; }
   }
 
