@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from "react";
 // ═══════════════════════════════════════════════════════════════════
 // SITE CONFIG — flip COMING_SOON to false when ready to open store
 // ═══════════════════════════════════════════════════════════════════
-const COMING_SOON = true;
+const COMING_SOON = false;
 
 // ── ADMIN ACCOUNT ────────────────────────────────────────────────
 const ADMIN_EMAIL    = "alphaomegatides@yahoo.com";
@@ -1048,20 +1048,8 @@ function buildShopifyCartUrl(cartItems:{id:string,name:string,selectedSize:strin
 }
 
 function shopifyCheckout(cartItems:{id:string,name:string,selectedSize:string,selectedPrice:string,quantity?:number}[]){
-  const handleMap:Record<string,string> = {
-    glp3r:"glp-3-r", glp2t:"glp-2-t", glp1:"glp-1",
-    bpc157:"bpc-157", tb500:"tb-500",
-    cjc1295:"cjc-1295", cjcipa:"cjc-1295-ipamorelin-blend",
-    ipamorlin:"ipamorelin", tesamorlin:"tesamorlin", igf1lr3:"igf-1-lr3",
-    ghkcu:"ghk-cu", glow:"glow-complex",
-    nad:"nad", motsc:"mots-c", glutathione:"glutathione", ss31:"ss-31",
-    selank:"selank", semax:"semax", dsip:"dsip", mt2:"mt2",
-    reconst:"reconstitution-solution",
-  };
-  const handle = handleMap[cartItems[0]?.id] || cartItems[0]?.id || "";
-  const url = `https://${SHOPIFY_DOMAIN}/products/${handle}`;
-  // Force true external navigation — bypasses React router completely
-  window.location.assign(url);
+  // Shopify disabled — no-op, payments handled via XRP/alternative methods
+  console.log("Shopify checkout disabled. Use XRP payment in cart.");
 }
 
 
@@ -2701,10 +2689,7 @@ function Home({go,recentlyViewed=[],wishlist=[],toggleWishlist=()=>{}}){
       </div>
       <div style={{display:"flex",gap:10,flexWrap:"wrap",justifyContent:"center",marginBottom:24,position:"relative",zIndex:1}}>
         <PrimaryBtn onClick={()=>document.getElementById("products").scrollIntoView({behavior:"smooth"})} style={{padding:"12px 28px",fontSize:"0.9rem"}}>View Research Compounds →</PrimaryBtn>
-        {COMING_SOON
-          ? <HeroWaitlistBtn/>
-          : <GhostBtn onClick={()=>go("register")} style={{padding:"11px 24px",fontSize:"0.88rem"}}>Create Account</GhostBtn>
-        }
+        <GhostBtn onClick={()=>go("register")} style={{padding:"11px 24px",fontSize:"0.88rem"}}>Create Account</GhostBtn>
       </div>
       <div style={{display:"flex",justifyContent:"center",marginBottom:20,position:"relative",zIndex:1}}>
         <SocialProofTicker/>
@@ -2980,13 +2965,9 @@ function ProductPage({p,go,onAddToCart,wishlist=[],toggleWishlist=()=>{}}){
             </div>
           );
         })()}
-        {COMING_SOON ? (
-          <ComingSoonProductBtn p={p} sel={sel} textOnColor={textOnColor}/>
-        ) : (
-          <PrimaryBtn color={p.color} tc={textOnColor} full style={{padding:"15px",fontSize:"1rem",opacity:getStock(p.id)<=0?0.4:1,pointerEvents:getStock(p.id)<=0?"none":"auto"}} onClick={()=>{if(getStock(p.id)>0)onAddToCart&&onAddToCart(sel.s,sel.p);}}>
-            {getStock(p.id)<=0?"— Out of Stock —":`Add to Cart — ${sel.p}`}
-          </PrimaryBtn>
-        )}
+        <PrimaryBtn color={p.color} tc={textOnColor} full style={{padding:"15px",fontSize:"1rem",opacity:getStock(p.id)<=0?0.4:1,pointerEvents:getStock(p.id)<=0?"none":"auto"}} onClick={()=>{if(getStock(p.id)>0)onAddToCart&&onAddToCart(sel.s,sel.p);}}>
+          {getStock(p.id)<=0?"— Out of Stock —":`Add to Cart — ${sel.p}`}
+        </PrimaryBtn>
       </div>
 
       {/* Feature pills */}
@@ -3807,34 +3788,9 @@ function Dashboard({user,go,onLogout,wishlistIds=[]}){
 
 // ── CHECKOUT PAGE ────────────────────────────────────
 function CheckoutPage({product:p, go, user}){
-  const [showModal, setShowModal] = useState(true);
-  if (!COMING_SOON) {
-    // Live mode: redirect to shopify
-    useEffect(()=>{
-      if(!p) return;
-      const handleMap={glp3r:"glp-3-r",glp2t:"glp-2-t",glp1:"glp-1",bpc157:"bpc-157",tb500:"tb-500",cjc1295:"cjc-1295",cjcipa:"cjc-1295-ipamorelin-blend",ipamorlin:"ipamorelin",tesamorlin:"tesamorlin",igf1lr3:"igf-1-lr3",ghkcu:"ghk-cu",glow:"glow-complex",nad:"nad",motsc:"mots-c",glutathione:"glutathione",ss31:"ss-31",selank:"selank",semax:"semax",dsip:"dsip",mt2:"mt2",reconst:"reconstitution-solution"};
-      const handle=handleMap[p.id]||p.id;
-      window.location.href=`https://sequential-peptides.myshopify.com/products/${handle}`;
-    },[]);
-  }
-
-  return <div style={{paddingTop:70,background:"#0e0e0e",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center"}}>
-    <div style={{textAlign:"center",padding:"40px 24px",maxWidth:440}}>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginBottom:28}}>
-        <span style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1.6rem",color:"#ff6b6b"}}>α</span>
-        <span style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1.6rem",color:"#3be8b0"}}>Ω</span>
-      </div>
-      <div style={{width:56,height:56,borderRadius:"50%",background:"rgba(59,232,176,0.1)",border:"2px solid rgba(59,232,176,0.3)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 20px",fontSize:"1.6rem"}}>🔒</div>
-      <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1.3rem",marginBottom:10}}>Redirecting to Checkout</div>
-      <p style={{color:"rgba(255,255,255,0.45)",fontSize:"0.88rem",lineHeight:1.7,marginBottom:20}}>administering you to Shopify's seaddress checkout — credit card, Shop Pay, and Apple Pay accepted.</p>
-      <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
-        {[["💳","Credit Card"],["🍎","Apple Pay"],["🛍️","Shop Pay"]].map(([icon,label])=>(
-          <div key={label} style={{background:"#1c1c1c",border:"1px solid rgba(255,255,255,0.08)",borderRadius:10,padding:"8px 16px",fontSize:"0.78rem",color:"rgba(255,255,255,0.4)",display:"flex",alignItems:"center",gap:6}}>{icon} {label}</div>
-        ))}
-      </div>
-      <button onClick={()=>go("cart")} style={{marginTop:24,background:"transparent",color:"rgba(255,255,255,0.3)",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:"0.82rem"}}>← Back to cart</button>
-    </div>
-  </div>;
+  // Shopify removed — redirect to cart with XRP payment
+  useEffect(()=>{ go("cart"); },[]);
+  return null;
 }
 
 
@@ -4353,7 +4309,7 @@ function StickyBuyBar({p, sel, onAction}: {p:any; sel:any; onAction:()=>void}) {
       <button onClick={onAction}
         style={{background:p.color,color:isLight?"#0e0e0e":"#fff",border:"none",padding:"11px 22px",borderRadius:100,cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:"0.85rem",flexShrink:0,transition:"opacity .2s"}}
         onMouseEnter={e=>e.currentTarget.style.opacity="0.88"} onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
-        {COMING_SOON ? "🚀 Join Waitlist" : `Add — ${sel?.p}`}
+        {`Add — ${sel?.p}`}
       </button>
     </div>
   );
@@ -5465,7 +5421,7 @@ function PaymentOptions({total, cartItems}:{total:number; cartItems:any[]}) {
       {selected&&selected!=="xrp"&&(
         <div style={{background:"rgba(59,232,176,0.07)",border:"1px solid rgba(59,232,176,0.2)",borderRadius:12,padding:"12px 14px",fontSize:"0.78rem",color:"rgba(255,255,255,0.55)",lineHeight:1.65,marginBottom:12}}>
           {PAYMENT_PROCESSORS.find(p=>p.id===selected)?.note}
-          {COMING_SOON&&<div style={{marginTop:8,color:"#3be8b0",fontWeight:600}}>🚀 Payment processing activates at store launch. Join the waitlist to be notified.</div>}
+
         </div>
       )}
       {showXRP&&<XRPPaymentModal total={total} onClose={()=>{setShowXRP(false);setSelected(null);}}/>}
@@ -5474,20 +5430,15 @@ function PaymentOptions({total, cartItems}:{total:number; cartItems:any[]}) {
 }
 
 function CheckoutLink({cart,total}:{cart:{id:string}[],total:number}){
-  const [showModal,setShowModal]=useState(false);
-  if(!COMING_SOON){
-    // Live store mode — use original Shopify/Authorize.net logic
-    const items=cart.map(i=>VARIANT_MAP[i.id]?`${VARIANT_MAP[i.id]}:1`:null).filter(Boolean);
-    const shopifyUrl=items.length>0?`https://sequential-peptides.myshopify.com/cart/${items.join(",")}?storefront=true`:`https://sequential-peptides.myshopify.com`;
-    return <a href={shopifyUrl} target="_blank" rel="noreferrer" style={{width:"100%",padding:"16px",background:"#3be8b0",color:"#0e0e0e",borderRadius:100,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontWeight:700,fontSize:"1rem",display:"flex",alignItems:"center",justifyContent:"center",gap:8,textDecoration:"none",boxSizing:"border-box"}}>🔒 Checkout · ${total.toFixed(2)}</a>;
-  }
+  // Shopify disabled — XRP + alternative payments only
   return (
-    <>
-      <button onClick={()=>setShowModal(true)} style={{width:"100%",padding:"16px",background:"linear-gradient(135deg,#3be8b0,#4f8ef7)",color:"#0e0e0e",borderRadius:100,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontWeight:700,fontSize:"1rem",display:"flex",alignItems:"center",justifyContent:"center",gap:8,border:"none"}}>
-        🚀 Join Waitlist to Purchase — ${total.toFixed(2)}
-      </button>
-      {showModal && <ComingSoonModal onClose={()=>setShowModal(false)} cartItems={cart} sourcePage="Cart"/>}
-    </>
+    <div style={{background:"rgba(59,232,176,0.06)",border:"1px solid rgba(59,232,176,0.2)",borderRadius:14,padding:"14px 18px",textAlign:"center" as const}}>
+      <div style={{fontSize:"0.78rem",color:"rgba(255,255,255,0.5)",lineHeight:1.6}}>
+        ⚡ Select a payment method above and complete your order.<br/>
+        <span style={{color:"#3be8b0",fontWeight:600}}>XRP recommended</span> — instant, near-zero fees.<br/>
+        <span style={{fontSize:"0.7rem",color:"rgba(255,255,255,0.3)"}}>Credit card processing coming soon · Orders confirmed via email</span>
+      </div>
+    </div>
   );
 }
 
