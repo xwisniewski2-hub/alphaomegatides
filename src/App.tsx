@@ -859,10 +859,10 @@ function AddressField({label, value, onChange, onSelect, placeholder}) {
   );
 }
 
-function PrimaryBtn({children,onClick,color="#3be8b0",tc="#0e0e0e",full,style={}}){
+function PrimaryBtn({children,onClick,color="#3be8b0",tc="#0e0e0e",full,style={},disabled=false}:any){
   const [h,sh]=useState(false);
-  return <button onClick={onClick} onMouseEnter={()=>sh(true)} onMouseLeave={()=>sh(false)}
-    style={{background:h?"#4f8ef7":color,color:tc,border:"none",padding:"13px 28px",borderRadius:100,cursor:"pointer",fontFamily:"inherit",fontWeight:600,fontSize:"0.9rem",transition:"all .2s",width:full?"100%":"auto",...style}}>{children}</button>;
+  return <button onClick={disabled?undefined:onClick} onMouseEnter={()=>sh(true)} onMouseLeave={()=>sh(false)} disabled={disabled}
+    style={{background:disabled?"rgba(255,255,255,0.1)":h?"#4f8ef7":color,color:disabled?"rgba(255,255,255,0.3)":tc,border:"none",padding:"13px 28px",borderRadius:100,cursor:disabled?"not-allowed":"pointer",fontFamily:"inherit",fontWeight:600,fontSize:"0.9rem",transition:"all .2s",width:full?"100%":"auto",opacity:disabled?0.6:1,...style}}>{children}</button>;
 }
 function GhostBtn({children,onClick,style={}}){
   const [h,sh]=useState(false);
@@ -6133,11 +6133,13 @@ async function fbPostMessage(msg: Omit<ChatMessage,"id">): Promise<void> {
 
 async function fbGetMessages(): Promise<ChatMessage[]> {
   try {
-    const res = await fetch(FB_URL(FB_CHAT_PATH) + '?orderBy="timestamp"&limitToLast=200');
+    const res = await fetch(FB_URL(FB_CHAT_PATH));
+    if (!res.ok) return [];
     const data = await res.json();
-    if (!data) return [];
-    return Object.entries(data).map(([id, val]:any) => ({ ...val, id }))
-      .sort((a,b) => a.timestamp - b.timestamp);
+    if (!data || typeof data !== "object") return [];
+    const msgs = Object.entries(data).map(([id, val]:any) => ({ ...val, id }));
+    msgs.sort((a,b) => (a.timestamp||0) - (b.timestamp||0));
+    return msgs.slice(-200); // keep last 200
   } catch { return []; }
 }
 
@@ -6470,9 +6472,11 @@ interface FlashSale {
 
 function getFlashSale(): FlashSale | null {
   try {
-    const d = JSON.parse(localStorage.getItem(FLASH_KEY) || "null");
+    const raw = localStorage.getItem(FLASH_KEY);
+    if (!raw) return null;
+    const d = JSON.parse(raw);
     if (!d || !d.active) return null;
-    if (d.endsAt && new Date(d.endsAt) < new Date()) return null; // expired
+    if (d.endsAt && d.endsAt !== "" && new Date(d.endsAt).getTime() < Date.now()) return null;
     return d;
   } catch { return null; }
 }
@@ -6501,19 +6505,22 @@ function FlashSaleBanner() {
 
   // Countdown timer
   useEffect(() => {
-    if (!sale?.endsAt) { setTimeLeft(""); return; }
+    const endsAt = sale && sale.endsAt ? sale.endsAt : null;
+    if (!endsAt) { setTimeLeft(""); return; }
     const tick = () => {
-      const diff = new Date(sale.endsAt).getTime() - Date.now();
-      if (diff <= 0) { setTimeLeft(""); load(); return; }
-      const h = Math.floor(diff/3600000);
-      const m = Math.floor((diff%3600000)/60000);
-      const s = Math.floor((diff%60000)/1000);
-      setTimeLeft(h>0 ? `${h}h ${m}m ${s}s` : `${m}m ${s}s`);
+      try {
+        const diff = new Date(endsAt).getTime() - Date.now();
+        if (diff <= 0) { setTimeLeft(""); return; }
+        const h = Math.floor(diff/3600000);
+        const m = Math.floor((diff%3600000)/60000);
+        const s = Math.floor((diff%60000)/1000);
+        setTimeLeft(h>0 ? String(h)+"h "+String(m)+"m "+String(s)+"s" : String(m)+"m "+String(s)+"s");
+      } catch { setTimeLeft(""); }
     };
     tick();
     const iv = setInterval(tick, 1000);
     return () => clearInterval(iv);
-  }, [sale?.endsAt]);
+  }, [sale ? sale.endsAt : null]);
 
   if (!sale || dismissed) return null;
 
@@ -6644,7 +6651,7 @@ function FlashSaleAdmin() {
           <div style={{borderRadius:10,overflow:"hidden",border:"1px solid rgba(255,255,255,0.1)"}}>
             <div style={{fontSize:"0.68rem",color:"rgba(255,255,255,0.3)",padding:"4px 10px",background:"rgba(255,255,255,0.03)"}}>PREVIEW</div>
             <div style={{
-              background:({red:"linear-gradient(90deg,#7f0000,#c0392b,#7f0000)",green:"linear-gradient(90deg,#0a3d1f,#1a7a3a,#0a3d1f)",gold:"linear-gradient(90deg,#5c3a00,#c07800,#5c3a00)",blue:"linear-gradient(90deg,#0a1a4a,#1a3a8a,#0a1a4a)"})[sale.color]||"",
+              background:({"red":"linear-gradient(90deg,#7f0000,#c0392b,#7f0000)","green":"linear-gradient(90deg,#0a3d1f,#1a7a3a,#0a3d1f)","gold":"linear-gradient(90deg,#5c3a00,#c07800,#5c3a00)","blue":"linear-gradient(90deg,#0a1a4a,#1a3a8a,#0a1a4a)"})[sale.color as string]||"linear-gradient(90deg,#7f0000,#c0392b,#7f0000)",
               padding:"10px 16px",display:"flex",alignItems:"center",gap:10,flexWrap:"wrap" as const}}>
               <span>⚡</span>
               <span style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"0.9rem",color:"#fff"}}>{sale.message}</span>
