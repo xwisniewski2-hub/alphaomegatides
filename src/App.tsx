@@ -2161,9 +2161,17 @@ function ComingSoonProductBtn({p, sel, textOnColor}) {
 function ProductCard({p,go,wishlist=[],toggleWishlist=()=>{}}){
   return (
     <div onClick={()=>go("product",p.id)}
-      style={{borderRadius:24,overflow:"hidden",cursor:"pointer",transition:"all 0.25s",boxShadow:`0 4px 32px ${p.color}22`,border:`1px solid ${p.color}33`}}
-      onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-6px)";e.currentTarget.style.boxShadow=`0 20px 48px ${p.color}44`;}}
-      onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow=`0 4px 32px ${p.color}22`;}}>
+      style={{borderRadius:24,overflow:"hidden",cursor:"pointer",transition:"transform 0.25s, box-shadow 0.25s",boxShadow:`0 4px 32px ${p.color}22`,border:`1px solid ${p.color}33`,position:"relative" as const}}
+      onMouseEnter={e=>{
+        const el=e.currentTarget;
+        el.style.transform="translateY(-8px) scale(1.01)";
+        el.style.boxShadow=`0 24px 56px ${p.color}55, 0 0 0 1px ${p.color}44`;
+      }}
+      onMouseLeave={e=>{
+        const el=e.currentTarget;
+        el.style.transform="none";
+        el.style.boxShadow=`0 4px 32px ${p.color}22`;
+      }}>
       <div style={{background:`linear-gradient(160deg,${p.color}55 0%,${p.color}11 40%,#0e0e0e 100%)`,padding:"36px 28px 28px",position:"relative",overflow:"hidden",minHeight:220,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center"}}>
         <div style={{position:"absolute",width:160,height:160,borderRadius:"50%",background:p.color,filter:"blur(60px)",opacity:0.15,top:"0%",left:"50%",transform:"translateX(-50%)",pointerEvents:"none"}}/>
         <InfoPlacard productId={p.id}/>
@@ -2460,6 +2468,152 @@ function CategoryPage({catId,go,wishlist=[],toggleWishlist=()=>{}}){
 }
 
 // ── HOME ────────────────────────────────────────────
+
+// ── PARTICLE FIELD — canvas-based floating particles ──
+function ParticleField() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    let w = canvas.width = canvas.offsetWidth;
+    let h = canvas.height = canvas.offsetHeight;
+    const particles = Array.from({length:55},()=>({
+      x: Math.random()*w, y: Math.random()*h,
+      vx: (Math.random()-.5)*0.35, vy: (Math.random()-.5)*0.35,
+      r: Math.random()*1.6+0.4,
+      color: Math.random()>.6?"rgba(59,232,176,":"rgba(79,142,247,",
+      alpha: Math.random()*0.45+0.1,
+    }));
+    let frame: number;
+    const draw = () => {
+      ctx.clearRect(0,0,w,h);
+      particles.forEach(p => {
+        p.x += p.vx; p.y += p.vy;
+        if(p.x<0)p.x=w; if(p.x>w)p.x=0;
+        if(p.y<0)p.y=h; if(p.y>h)p.y=0;
+        ctx.beginPath();
+        ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+        ctx.fillStyle=p.color+p.alpha+")";
+        ctx.fill();
+      });
+      // Draw connecting lines between nearby particles
+      for(let i=0;i<particles.length;i++){
+        for(let j=i+1;j<particles.length;j++){
+          const dx=particles[i].x-particles[j].x;
+          const dy=particles[i].y-particles[j].y;
+          const dist=Math.sqrt(dx*dx+dy*dy);
+          if(dist<90){
+            ctx.beginPath();
+            ctx.strokeStyle=`rgba(59,232,176,${0.08*(1-dist/90)})`;
+            ctx.lineWidth=0.5;
+            ctx.moveTo(particles[i].x,particles[i].y);
+            ctx.lineTo(particles[j].x,particles[j].y);
+            ctx.stroke();
+          }
+        }
+      }
+      frame = requestAnimationFrame(draw);
+    };
+    draw();
+    const resize = () => { w=canvas.width=canvas.offsetWidth; h=canvas.height=canvas.offsetHeight; };
+    window.addEventListener("resize",resize);
+    return () => { cancelAnimationFrame(frame); window.removeEventListener("resize",resize); };
+  },[]);
+  return <canvas ref={canvasRef} style={{position:"absolute",inset:0,width:"100%",height:"100%",pointerEvents:"none",zIndex:0}}/>;
+}
+
+// ── ANIMATED COUNTER — counts up from 0 to target ──
+function AnimatedCounter({target,suffix="",duration=1200}:{target:number;suffix?:string;duration?:number}) {
+  const [val,setVal] = useState(0);
+  const ref = useRef<HTMLSpanElement>(null);
+  useEffect(()=>{
+    const obs = new IntersectionObserver(entries=>{
+      if(entries[0].isIntersecting){
+        const start=Date.now();
+        const tick=()=>{
+          const elapsed=Date.now()-start;
+          const progress=Math.min(elapsed/duration,1);
+          const ease=1-Math.pow(1-progress,3);
+          setVal(Math.round(ease*target));
+          if(progress<1) requestAnimationFrame(tick);
+        };
+        tick();
+        obs.disconnect();
+      }
+    },{threshold:0.3});
+    if(ref.current) obs.observe(ref.current);
+    return ()=>obs.disconnect();
+  },[target,duration]);
+  return <span ref={ref}>{val.toLocaleString()}{suffix}</span>;
+}
+
+// ── LIVE VIEWER BADGE — Firebase-powered real-time viewers ──
+const FB_VIEWERS_PATH = "/presence";
+function LiveViewerBadge({productId}:{productId:string}) {
+  const [count,setCount] = useState<number|null>(null);
+  useEffect(()=>{
+    const key = `${productId}_${Math.random().toString(36).slice(2,8)}`;
+    // Register presence
+    const register = async () => {
+      try {
+        await fetch(`${FB_CONFIG.databaseURL}${FB_VIEWERS_PATH}/${productId}/${key}.json`,{
+          method:"PUT",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({t:Date.now()})
+        });
+      } catch {}
+    };
+    // Count viewers
+    const countViewers = async () => {
+      try {
+        const res = await fetch(`${FB_CONFIG.databaseURL}${FB_VIEWERS_PATH}/${productId}.json`);
+        const data = await res.json();
+        if(!data) { setCount(0); return; }
+        const now = Date.now();
+        const active = Object.values(data).filter((v:any)=>now-(v?.t||0)<90000).length;
+        setCount(active);
+      } catch {}
+    };
+    register();
+    countViewers();
+    const iv = setInterval(()=>{ register(); countViewers(); },30000);
+    // Cleanup on unmount
+    return ()=>{
+      clearInterval(iv);
+      fetch(`${FB_CONFIG.databaseURL}${FB_VIEWERS_PATH}/${productId}/${key}.json`,{method:"DELETE"}).catch(()=>{});
+    };
+  },[productId]);
+  if(!count||count<2) return null;
+  return (
+    <div style={{display:"inline-flex",alignItems:"center",gap:5,background:"rgba(59,232,176,0.08)",border:"1px solid rgba(59,232,176,0.2)",borderRadius:100,padding:"3px 10px",fontSize:"0.68rem",fontWeight:600,color:"#3be8b0"}}>
+      <span style={{width:5,height:5,borderRadius:"50%",background:"#3be8b0",animation:"chatpulse 1.5s infinite",display:"inline-block"}}/>
+      {count} researchers viewing
+    </div>
+  );
+}
+
+// ── STATS BAR — animated numbers for homepage ──
+function StatsBar() {
+  return (
+    <div style={{display:"flex",justifyContent:"center",flexWrap:"wrap" as const,gap:"24px 40px",padding:"28px 24px",background:"rgba(255,255,255,0.025)",borderTop:"1px solid rgba(255,255,255,0.06)",borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
+      {[
+        {label:"Compounds Available",value:21,suffix:""},
+        {label:"COA Verified Products",value:100,suffix:"%"},
+        {label:"US Researchers Served",value:2400,suffix:"+"},
+        {label:"Avg Purity Rating",value:99.1,suffix:"%"},
+      ].map(s=>(
+        <div key={s.label} style={{textAlign:"center" as const,minWidth:120}}>
+          <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"clamp(1.4rem,3vw,2rem)",color:"#3be8b0",lineHeight:1}}>
+            <AnimatedCounter target={s.value} suffix={s.suffix} duration={1400}/>
+          </div>
+          <div style={{fontSize:"0.68rem",color:"rgba(255,255,255,0.38)",marginTop:4,letterSpacing:"0.04em",textTransform:"uppercase" as const}}>{s.label}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function HeroWaitlistBtn() {
   const [show, setShow] = useState(false);
   return (
@@ -2476,13 +2630,27 @@ function HeroWaitlistBtn() {
 function Home({go,recentlyViewed=[],wishlist=[],toggleWishlist=()=>{}}){
   return <div style={{paddingTop:64,background:"#0e0e0e",color:"#ffffff"}}>
     <section style={{minHeight:"80vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center",padding:"48px 24px 40px",background:"#0e0e0e",position:"relative",overflow:"hidden"}}>
-      <div style={{position:"absolute",width:500,height:500,borderRadius:"50%",background:C.g,filter:"blur(100px)",opacity:.15,top:-150,right:-100,pointerEvents:"none"}}/>
-      <div style={{position:"absolute",width:380,height:380,borderRadius:"50%",background:C.b,filter:"blur(100px)",opacity:.12,bottom:-80,left:-80,pointerEvents:"none"}}/>
+      <ParticleField/>
+      <div style={{position:"absolute",width:500,height:500,borderRadius:"50%",background:C.g,filter:"blur(100px)",opacity:.12,top:-150,right:-100,pointerEvents:"none"}}/>
+      <div style={{position:"absolute",width:380,height:380,borderRadius:"50%",background:C.b,filter:"blur(100px)",opacity:.1,bottom:-80,left:-80,pointerEvents:"none"}}/>
       {/* Animated floating dots */}
       <style>{`
         @keyframes floatUp{0%{transform:translateY(0) translateX(0);opacity:0}20%{opacity:0.6}80%{opacity:0.3}100%{transform:translateY(-120px) translateX(20px);opacity:0}}
         @keyframes floatUp2{0%{transform:translateY(0) translateX(0);opacity:0}20%{opacity:0.4}80%{opacity:0.2}100%{transform:translateY(-100px) translateX(-15px);opacity:0}}
         @keyframes pulseGlow{0%,100%{opacity:0.15}50%{opacity:0.28}}
+        @keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
+        @keyframes pulseRing{0%{transform:scale(1);opacity:0.6}70%{transform:scale(1.35);opacity:0}100%{transform:scale(1.35);opacity:0}}
+        @keyframes fadeInUp{0%{opacity:0;transform:translateY(24px)}100%{opacity:1;transform:translateY(0)}}
+        @keyframes gradientShift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+        @keyframes breathe{0%,100%{transform:scale(1);filter:brightness(1)}50%{transform:scale(1.04);filter:brightness(1.15)}}
+        .stat-card:hover{transform:translateY(-4px)!important;transition:transform .2s!important;}
+        .product-grid-item{animation:fadeInUp 0.4s ease-out both;}
+        .product-grid-item:nth-child(1){animation-delay:0s}
+        .product-grid-item:nth-child(2){animation-delay:0.05s}
+        .product-grid-item:nth-child(3){animation-delay:0.1s}
+        .product-grid-item:nth-child(4){animation-delay:0.15s}
+        .product-grid-item:nth-child(5){animation-delay:0.2s}
+        .product-grid-item:nth-child(6){animation-delay:0.25s}
       `}</style>
       {[4,3,5,4,3,5,4,3].map((sz,i)=>(
         <div key={i} style={{position:"absolute",width:sz,height:sz,borderRadius:"50%",background:i%2===0?"#3be8b0":"#4f8ef7",left:`${10+i*11}%`,bottom:`${10+i*8}%`,animation:`floatUp${i%2===0?"":"2"} ${3+i*0.7}s ease-in-out ${i*0.4}s infinite`,pointerEvents:"none",zIndex:0,opacity:0.5}}/>
@@ -2519,7 +2687,10 @@ function Home({go,recentlyViewed=[],wishlist=[],toggleWishlist=()=>{}}){
         Research-grade peptides · For in-vitro research use only
       </div>
       <h1 style={{fontFamily:"'Syne',sans-serif",fontSize:"clamp(1.6rem,3.5vw,2.4rem)",fontWeight:800,lineHeight:1.1,letterSpacing:"-.03em",maxWidth:560,position:"relative",zIndex:1,margin:"0 0 10px",color:"#ffffff"}}>
-        Verified Research <span style={{color:"#3be8b0"}}>Peptides</span>
+        Verified Research{" "}
+        <span style={{background:"linear-gradient(90deg,#3be8b0,#4f8ef7,#a855f7,#3be8b0)",backgroundSize:"300% 100%",WebkitBackgroundClip:"text" as const,WebkitTextFillColor:"transparent",backgroundClip:"text",animation:"gradientShift 4s linear infinite"}}>
+          Peptides
+        </span>
       </h1>
       <p style={{fontSize:"0.9rem",color:"rgba(255,255,255,0.45)",maxWidth:460,lineHeight:1.65,marginBottom:6,position:"relative",zIndex:1}}>
         Independent third-party verified compounds. Full COA documentation. US fulfillment only.
@@ -2572,6 +2743,7 @@ function Home({go,recentlyViewed=[],wishlist=[],toggleWishlist=()=>{}}){
       </div>
     </div>}
 
+    <StatsBar/>
     <section id="products" style={{maxWidth:1140,margin:"0 auto",padding:"80px 36px",background:"#0e0e0e"}}>
       <div style={{fontSize:"0.7rem",fontWeight:600,letterSpacing:"0.15em",textTransform:"uppercase",color:"#3be8b0",marginBottom:10}}>Research Compounds</div>
       <div style={{fontFamily:"'Syne',sans-serif",fontSize:"clamp(1.9rem,4vw,2.7rem)",fontWeight:800,letterSpacing:"-.03em",marginBottom:6,color:"#ffffff"}}>Available for research procurement</div>
@@ -2694,6 +2866,7 @@ function ProductPage({p,go,onAddToCart,wishlist=[],toggleWishlist=()=>{}}){
       </div>
       <div style={{fontSize:"4.5rem",marginBottom:16,position:"relative",zIndex:1,filter:"drop-shadow(0 8px 24px rgba(0,0,0,0.5))"}}>{p.icon}</div>
       <h1 style={{fontFamily:"'Syne',sans-serif",fontSize:"clamp(2rem,6vw,3rem)",fontWeight:800,letterSpacing:"-.03em",lineHeight:1.1,color:"#ffffff",marginBottom:8,position:"relative",zIndex:1}}>{p.name}</h1>
+      <div style={{marginBottom:10,position:"relative",zIndex:1}}><LiveViewerBadge productId={p.id}/></div>
       <div style={{fontSize:"0.82rem",color:"rgba(255,255,255,0.5)",marginBottom:20,position:"relative",zIndex:1}}>{p.tag} · {sel.s} · Lyophilized Powder</div>
       {p.chips&&<div style={{display:"flex",flexWrap:"wrap",gap:8,justifyContent:"center",position:"relative",zIndex:1,maxWidth:500,margin:"0 auto"}}>
         {p.chips.map(chip=>{
@@ -4485,21 +4658,27 @@ function CookieConsent() {
 // ═══════════════════════════════════════════════════════════════
 // MOBILE BOTTOM NAV BAR
 // ═══════════════════════════════════════════════════════════════
-function MobileBottomNav({go, pg, cartCount}: {go:(p:string,id?:string)=>void; pg:string; cartCount:number}) {
+function MobileBottomNav({go, pg, cartCount, user}: {go:(p:string,id?:string)=>void; pg:string; cartCount:number; user:any}) {
   const items = [
     {icon:"🏠", label:"Home",    page:"home"},
     {icon:"🎯", label:"Quiz",    page:"quiz"},
     {icon:"🛒", label:"Cart",    page:"cart", badge:cartCount},
+    {icon:"💬", label:"Chat",    page:"chat", membersOnly:true},
     {icon:"👤", label:"Account", page:"dashboard"},
   ];
   return (
     <nav style={{position:"fixed",bottom:0,left:0,right:0,zIndex:987,background:"rgba(10,10,10,0.97)",borderTop:"1px solid rgba(255,255,255,0.07)",display:"flex",alignItems:"stretch",backdropFilter:"blur(12px)",paddingBottom:"env(safe-area-inset-bottom)"}}>
       {items.map(item=>(
-        <button key={item.page} onClick={()=>go(item.page)}
+        <button key={item.page}
+          onClick={()=>{
+            if(item.membersOnly && !user) { go("login"); return; }
+            go(item.page);
+          }}
           style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:3,padding:"8px 4px",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",position:"relative",transition:"opacity .15s",opacity:pg===item.page?1:0.45}}>
           <span style={{fontSize:"1.1rem"}}>{item.icon}</span>
           <span style={{fontSize:"0.55rem",fontWeight:pg===item.page?700:400,color:pg===item.page?"#3be8b0":"rgba(255,255,255,0.5)",letterSpacing:"0.04em"}}>{item.label}</span>
           {item.badge!=null&&item.badge>0&&<span style={{position:"absolute",top:6,right:"calc(50% - 14px)",width:14,height:14,borderRadius:"50%",background:"#ff6b6b",color:"#fff",fontSize:"0.55rem",fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center"}}>{item.badge}</span>}
+          {item.membersOnly&&!user&&<span style={{position:"absolute",top:5,right:"calc(50% - 16px)",fontSize:"0.55rem",color:"rgba(255,209,102,0.7)"}}>🔒</span>}
           {pg===item.page&&<div style={{position:"absolute",bottom:0,left:"20%",right:"20%",height:2,background:"#3be8b0",borderRadius:2}}/>}
         </button>
       ))}
@@ -6119,6 +6298,8 @@ interface ChatMessage {
   fileData?: string;
   fileType?: string;
   timestamp: number;
+  replyTo?: { id: string; userName: string; text: string; imageData?: string };
+  reactions?: { [emoji: string]: string[] }; // emoji -> array of userEmails
 }
 
 async function fbPostMessage(msg: Omit<ChatMessage,"id">): Promise<void> {
@@ -6149,6 +6330,31 @@ async function fbDeleteMessage(id: string): Promise<void> {
   } catch {}
 }
 
+async function fbToggleReaction(msgId: string, emoji: string, userEmail: string): Promise<void> {
+  try {
+    const res = await fetch(`${FB_CONFIG.databaseURL}${FB_CHAT_PATH}/${msgId}.json`);
+    if (!res.ok) return;
+    const msg = await res.json();
+    if (!msg) return;
+    const reactions = msg.reactions || {};
+    const users: string[] = reactions[emoji] || [];
+    const idx = users.indexOf(userEmail);
+    if (idx >= 0) users.splice(idx, 1); else users.push(userEmail);
+    if (users.length === 0) delete reactions[emoji]; else reactions[emoji] = users;
+    await fetch(`${FB_CONFIG.databaseURL}${FB_CHAT_PATH}/${msgId}/reactions.json`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(users.length === 0 ? null : (Object.keys(reactions).length ? reactions : null)),
+    });
+    // Simpler: just patch the whole reactions object
+    await fetch(`${FB_CONFIG.databaseURL}${FB_CHAT_PATH}/${msgId}.json`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reactions }),
+    });
+  } catch(e) { console.error("Reaction failed:", e); }
+}
+
 function MemberChatPage({go, user}: {go: Function; user: any}) {
   const [messages, setMessages]     = useState<ChatMessage[]>([]);
   const [text, setText]             = useState("");
@@ -6158,6 +6364,9 @@ function MemberChatPage({go, user}: {go: Function; user: any}) {
   const [imageData, setImgData]     = useState<string|null>(null);
   const [fileInfo, setFileInfo]     = useState<{name:string;data:string;type:string}|null>(null);
   const [deletingId, setDeletingId] = useState<string|null>(null);
+  const [replyTo, setReplyTo]       = useState<ChatMessage|null>(null);
+  const [lightboxSrc, setLightbox]  = useState<string|null>(null);
+  const [showEmojiFor, setShowEmojiFor] = useState<string|null>(null);
   const bottomRef    = useRef<HTMLDivElement>(null);
   const inputRef     = useRef<HTMLTextAreaElement>(null);
   const imgInputRef  = useRef<HTMLInputElement>(null);
@@ -6224,9 +6433,10 @@ function MemberChatPage({go, user}: {go: Function; user: any}) {
       timestamp: Date.now(),
       ...(imageData ? { imageData } : {}),
       ...(fileInfo ? { fileName: fileInfo.name, fileData: fileInfo.data, fileType: fileInfo.type } : {}),
+      ...(replyTo ? { replyTo: { id: replyTo.id||"", userName: replyTo.userName, text: replyTo.text, imageData: replyTo.imageData } } : {}),
     };
     await fbPostMessage(msg);
-    setText(""); clearAttachments(); setSending(false);
+    setText(""); clearAttachments(); setReplyTo(null); setSending(false);
     await loadMessages(true);
     setTimeout(() => { inputRef.current?.focus(); }, 50);
   };
@@ -6332,7 +6542,7 @@ function MemberChatPage({go, user}: {go: Function; user: any}) {
               const canDelete = isAdmin(user) || mine;
 
               return (
-                <div key={msg.id||mi} style={{display:"flex",flexDirection:mine?"row-reverse":"row",alignItems:"flex-end",gap:8,marginBottom:sameAuthor?2:8,marginTop:!mine&&!sameAuthor?6:0}}>
+                <div key={msg.id||mi} id={"msg-"+(msg.id||mi)} style={{display:"flex",flexDirection:mine?"row-reverse":"row",alignItems:"flex-end",gap:8,marginBottom:sameAuthor?2:8,marginTop:!mine&&!sameAuthor?6:0,transition:"background .4s",borderRadius:12}}>
                   {!mine && (
                     <div style={{width:32,height:32,flexShrink:0,borderRadius:"50%",
                       background:msg.isAdmin?"#ff6b6b":avatarColor(msg.userEmail),
@@ -6358,20 +6568,31 @@ function MemberChatPage({go, user}: {go: Function; user: any}) {
                       borderRadius:mine?(sameAuthor?"16px 4px 4px 16px":"16px 4px 16px 16px"):(sameAuthor?"4px 16px 16px 4px":"4px 16px 16px 16px"),
                       padding:"10px 13px",
                     }}>
-                      {msg.imageData && (
-                        <div style={{marginBottom:msg.text?8:0}}>
-                          <img src={msg.imageData} alt="shared"
-                            style={{maxWidth:"100%",maxHeight:280,borderRadius:10,display:"block",cursor:"pointer"}}
-                            onClick={()=>window.open(msg.imageData,"_blank")}/>
+                      {/* REPLY PREVIEW */}
+                      {msg.replyTo && (
+                        <div style={{background:"rgba(255,255,255,0.06)",borderLeft:"3px solid #3be8b0",borderRadius:"0 8px 8px 0",padding:"5px 10px",marginBottom:8,cursor:"pointer"}}
+                          onClick={()=>{const el=document.getElementById("msg-"+msg.replyTo!.id);el?.scrollIntoView({behavior:"smooth",block:"center"});el?.classList.add("msg-flash");}}>
+                          <div style={{fontSize:"0.65rem",fontWeight:700,color:"#3be8b0",marginBottom:2}}>{msg.replyTo.userName}</div>
+                          {msg.replyTo.imageData && <div style={{fontSize:"0.65rem",color:"rgba(255,255,255,0.4)"}}>🖼️ Image</div>}
+                          {msg.replyTo.text && <div style={{fontSize:"0.72rem",color:"rgba(255,255,255,0.55)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const,maxWidth:200}}>{msg.replyTo.text}</div>}
                         </div>
                       )}
-                      {msg.fileName && (
+                      {/* INLINE IMAGE — tap for fullscreen lightbox */}
+                      {msg.imageData && (
+                        <div style={{marginBottom:msg.text?8:0,position:"relative" as const}}>
+                          <img src={msg.imageData} alt="shared"
+                            style={{maxWidth:"100%",maxHeight:320,borderRadius:12,display:"block",cursor:"zoom-in",objectFit:"cover" as const,border:"1px solid rgba(255,255,255,0.1)"}}
+                            onClick={()=>setLightbox(msg.imageData!)}/>
+                          <div style={{position:"absolute",bottom:6,right:6,background:"rgba(0,0,0,0.5)",borderRadius:6,padding:"2px 6px",fontSize:"0.6rem",color:"rgba(255,255,255,0.7)",backdropFilter:"blur(4px)"}}>tap to expand</div>
+                        </div>
+                      )}
+                      {msg.fileName && !msg.fileType?.startsWith("image") && (
                         <a href={msg.fileData} download={msg.fileName}
                           style={{display:"flex",alignItems:"center",gap:8,background:"rgba(255,255,255,0.06)",
                             border:"1px solid rgba(255,255,255,0.1)",borderRadius:10,padding:"8px 12px",
                             marginBottom:msg.text?8:0,textDecoration:"none",cursor:"pointer"}}>
                           <span style={{fontSize:"1.4rem"}}>
-                            {msg.fileType?.includes("pdf")?"📄":msg.fileType?.includes("image")?"🖼️":"📎"}
+                            {msg.fileType?.includes("pdf")?"📄":"📎"}
                           </span>
                           <div>
                             <div style={{fontSize:"0.78rem",fontWeight:600,color:"#fff",maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{msg.fileName}</div>
@@ -6384,16 +6605,47 @@ function MemberChatPage({go, user}: {go: Function; user: any}) {
                           {msg.text}
                         </div>
                       )}
-                      <div style={{display:"flex",alignItems:"center",justifyContent:mine?"flex-end":"flex-start",gap:8,marginTop:4}}>
+                      {/* REACTIONS */}
+                      {msg.reactions && Object.keys(msg.reactions).length > 0 && (
+                        <div style={{display:"flex",flexWrap:"wrap" as const,gap:4,marginTop:6}}>
+                          {Object.entries(msg.reactions).map(([emoji,users])=>(
+                            <button key={emoji} onClick={()=>msg.id&&fbToggleReaction(msg.id,emoji,user.email).then(()=>loadMessages(false))}
+                              style={{background:(users as string[]).includes(user.email)?"rgba(59,232,176,0.2)":"rgba(255,255,255,0.07)",
+                                border:(users as string[]).includes(user.email)?"1px solid rgba(59,232,176,0.4)":"1px solid rgba(255,255,255,0.1)",
+                                borderRadius:100,padding:"2px 8px",cursor:"pointer",fontSize:"0.78rem",display:"flex",alignItems:"center",gap:3,color:"#fff"}}>
+                              {emoji} <span style={{fontSize:"0.65rem",color:"rgba(255,255,255,0.55)"}}>{(users as string[]).length}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      <div style={{display:"flex",alignItems:"center",justifyContent:mine?"flex-end":"flex-start",gap:6,marginTop:4}}>
                         <div style={{fontSize:"0.62rem",color:muted}}>{formatTime(msg.timestamp)}</div>
+                        {/* EMOJI REACTION PICKER TRIGGER */}
+                        <button onClick={()=>setShowEmojiFor(showEmojiFor===msg.id?null:msg.id||null)}
+                          style={{background:"none",border:"none",color:"rgba(255,255,255,0.25)",cursor:"pointer",fontSize:"0.7rem",padding:"0 2px",lineHeight:1,transition:"color .15s"}}
+                          title="React">😊</button>
+                        {/* REPLY BUTTON */}
+                        <button onClick={()=>{setReplyTo(msg);setTimeout(()=>inputRef.current?.focus(),50);}}
+                          style={{background:"none",border:"none",color:"rgba(255,255,255,0.25)",cursor:"pointer",fontSize:"0.65rem",padding:"0 2px",lineHeight:1}}
+                          title="Reply">↩</button>
                         {canDelete && msg.id && (
                           <button onClick={()=>handleDelete(msg.id!)}
                             disabled={deletingId===msg.id}
-                            style={{background:"none",border:"none",color:"rgba(255,107,107,0.4)",cursor:"pointer",fontSize:"0.6rem",padding:"0 2px",lineHeight:1}}>
+                            style={{background:"none",border:"none",color:"rgba(255,107,107,0.3)",cursor:"pointer",fontSize:"0.6rem",padding:"0 2px",lineHeight:1}}>
                             {deletingId===msg.id?"…":"🗑"}
                           </button>
                         )}
                       </div>
+                      {/* EMOJI PICKER POPUP */}
+                      {showEmojiFor===msg.id && (
+                        <div style={{position:"absolute" as const,bottom:"100%",right:mine?"0":"auto",left:mine?"auto":"0",background:"#1c1c1c",border:"1px solid rgba(255,255,255,0.12)",borderRadius:12,padding:"6px 8px",display:"flex",gap:4,zIndex:50,boxShadow:"0 4px 20px rgba(0,0,0,0.5)"}}>
+                          {["👍","🔥","💉","🧬","⚗️","💪","🙌","❤️"].map(e=>(
+                            <button key={e} onClick={()=>{if(msg.id){fbToggleReaction(msg.id,e,user.email).then(()=>loadMessages(false));setShowEmojiFor(null);}}}
+                              style={{background:"none",border:"none",cursor:"pointer",fontSize:"1.1rem",padding:"2px 3px",borderRadius:6,transition:"background .1s"}}
+                              title={e}>{e}</button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -6403,6 +6655,32 @@ function MemberChatPage({go, user}: {go: Function; user: any}) {
         ))}
         <div ref={bottomRef}/>
       </div>
+
+      {/* LIGHTBOX */}
+      {lightboxSrc && (
+        <div onClick={()=>setLightbox(null)}
+          style={{position:"fixed" as const,inset:0,zIndex:9999,background:"rgba(0,0,0,0.92)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"zoom-out"}}>
+          <img src={lightboxSrc} alt="fullscreen"
+            style={{maxWidth:"95vw",maxHeight:"90vh",borderRadius:16,objectFit:"contain" as const,boxShadow:"0 0 60px rgba(0,0,0,0.8)"}}
+            onClick={e=>e.stopPropagation()}/>
+          <button onClick={()=>setLightbox(null)}
+            style={{position:"absolute" as const,top:20,right:20,background:"rgba(255,255,255,0.12)",border:"none",color:"#fff",width:40,height:40,borderRadius:"50%",cursor:"pointer",fontSize:"1.2rem",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+        </div>
+      )}
+
+      {/* REPLY BAR */}
+      {replyTo && (
+        <div style={{background:"#111",borderTop:"1px solid rgba(59,232,176,0.2)",padding:"8px 16px",display:"flex",alignItems:"center",gap:10,maxWidth:760,width:"100%",margin:"0 auto",boxSizing:"border-box" as const}}>
+          <div style={{width:3,height:"100%",background:"#3be8b0",borderRadius:2,flexShrink:0,alignSelf:"stretch"}}/>
+          <div style={{flex:1,overflow:"hidden"}}>
+            <div style={{fontSize:"0.65rem",fontWeight:700,color:"#3be8b0",marginBottom:1}}>Replying to {replyTo.userName}</div>
+            {replyTo.imageData && <div style={{fontSize:"0.65rem",color:"rgba(255,255,255,0.4)"}}>🖼️ Image</div>}
+            {replyTo.text && <div style={{fontSize:"0.72rem",color:"rgba(255,255,255,0.5)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{replyTo.text}</div>}
+          </div>
+          <button onClick={()=>setReplyTo(null)}
+            style={{background:"rgba(255,107,107,0.15)",border:"none",color:"#ff6b6b",borderRadius:"50%",width:24,height:24,cursor:"pointer",fontSize:"0.75rem",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✕</button>
+        </div>
+      )}
 
       {/* ATTACHMENT PREVIEW */}
       {(imagePreview || fileInfo) && (
@@ -6451,6 +6729,9 @@ function MemberChatPage({go, user}: {go: Function; user: any}) {
 
       <style>{`
         @keyframes chatpulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:.5;transform:scale(.8);} }
+        @keyframes msgflash { 0%{background:rgba(59,232,176,0.15);} 100%{background:transparent;} }
+        .msg-flash { animation: msgflash 1.2s ease-out; }
+        .chat-bubble-wrap:hover .chat-actions { opacity:1!important; }
       `}</style>
     </div>
   );
@@ -6958,7 +7239,7 @@ export default function App(){
     {pg==="dashboard"&&(user?<Dashboard user={user} go={go} onLogout={()=>su(null)} wishlistIds={wishlist}/>:<Login go={go} onLogin={su}/>)}
     {pg==="chat"&&<MemberChatPage go={go} user={user}/>}
 
-    <MobileBottomNav go={go} pg={pg} cartCount={cart.length}/>
+    <MobileBottomNav go={go} pg={pg} cartCount={cart.length} user={user}/>
     {/* ── SCROLL TO TOP + BACK BUTTONS ── */}
     <div style={{position:"fixed",bottom:88,left:16,display:"flex",flexDirection:"column",gap:8,zIndex:986}}>
       {canGoBack&&<button onClick={goBack}
