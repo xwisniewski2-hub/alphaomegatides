@@ -7558,7 +7558,6 @@ function XCommunityPage({go,user}:{go:Function;user:any}) {
         .account-chip:hover{background:rgba(79,142,247,0.15)!important;border-color:rgba(79,142,247,0.3)!important;}
       `}</style>
       <div style={{maxWidth:700,margin:"0 auto",padding:"0 16px"}}>
-        {/* Header */}
         <div style={{marginBottom:28,textAlign:"center",animation:"fadeUp .3s ease-out"}}>
           <div style={{display:"inline-flex",alignItems:"center",gap:10,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:100,padding:"6px 16px 6px 10px",marginBottom:16}}>
             <div style={{width:28,height:28,borderRadius:"50%",background:"#000",display:"flex",alignItems:"center",justifyContent:"center",border:"1px solid rgba(255,255,255,0.15)"}}>
@@ -7570,7 +7569,6 @@ function XCommunityPage({go,user}:{go:Function;user:any}) {
           <p style={{color:muted,fontSize:"0.88rem",margin:0,lineHeight:1.6}}>Pinned highlights from the peptide research community on X.</p>
         </div>
 
-        {/* Admin panel */}
         {user&&isAdmin(user)&&(
           <div style={{background:card,border:"1px solid rgba(255,107,107,0.2)",borderRadius:16,padding:16,marginBottom:20}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:showAdmin?14:0}}>
@@ -7583,19 +7581,19 @@ function XCommunityPage({go,user}:{go:Function;user:any}) {
                   style={{width:"100%",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:10,padding:"10px 13px",color:"#fff",fontFamily:"inherit",fontSize:"0.85rem",outline:"none",boxSizing:"border-box" as const}}/>
                 <input value={newLabel} onChange={e=>setNewLabel(e.target.value)} placeholder="Label (optional)"
                   style={{width:"100%",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:10,padding:"10px 13px",color:"#fff",fontFamily:"inherit",fontSize:"0.85rem",outline:"none",boxSizing:"border-box" as const}}/>
-                <button onClick={handleAddPin} style={{background:accentG,color:"#0e0e0e",border:"none",borderRadius:10,padding:"10px",fontFamily:"inherit",fontWeight:800,fontSize:"0.88rem",cursor:"pointer"}}>📌 Pin This Post</button>
+                <button onClick={()=>{if(!newUrl.trim())return;const id=extractTweetId(newUrl.trim());if(!id){alert("Not a valid X post URL.");return;}const pin:XPin={id,tweetUrl:newUrl.trim(),label:newLabel.trim()||"Featured post",addedAt:Date.now()};const updated=[pin,...pins].slice(0,10);setPins(updated);saveXPins(updated);setNewUrl("");setNewLabel("");setShowAdmin(false);}}
+                  style={{background:accentG,color:"#0e0e0e",border:"none",borderRadius:10,padding:"10px",fontFamily:"inherit",fontWeight:800,fontSize:"0.88rem",cursor:"pointer"}}>📌 Pin This Post</button>
               </div>
             )}
           </div>
         )}
 
-        {/* Pinned posts */}
         {pins.length>0&&(
           <div style={{marginBottom:28}}>
             <div style={{fontSize:"0.7rem",fontWeight:700,color:muted,letterSpacing:"0.08em",marginBottom:12,display:"flex",alignItems:"center",gap:8}}><span>📌</span> PINNED BY ADMIN</div>
             <div style={{display:"flex",flexDirection:"column",gap:12}}>
               {pins.map((pin,i)=>(
-                <div key={pin.id} className="x-card" style={{background:card,border:"1px solid rgba(255,209,102,0.15)",borderRadius:16,overflow:"hidden",boxShadow:"0 4px 20px rgba(0,0,0,0.4)",animationDelay:`${i*0.06}s`}}>
+                <div key={pin.id} className="x-card" style={{background:card,border:"1px solid rgba(255,209,102,0.15)",borderRadius:16,overflow:"hidden",boxShadow:"0 4px 20px rgba(0,0,0,0.4)"}}>
                   <div style={{padding:"10px 14px",background:"rgba(255,209,102,0.05)",borderBottom:"1px solid rgba(255,209,102,0.1)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                     <span style={{fontSize:"0.7rem",fontWeight:700,color:"rgba(255,209,102,0.8)",display:"flex",alignItems:"center",gap:6}}>📌 {pin.label}</span>
                     <div style={{display:"flex",gap:8,alignItems:"center"}}>
@@ -7616,11 +7614,10 @@ function XCommunityPage({go,user}:{go:Function;user:any}) {
 
         {pins.length===0&&<div style={{textAlign:"center",padding:"32px 20px",color:muted,marginBottom:24}}><div style={{fontSize:"2.5rem",marginBottom:10}}>📌</div><div style={{fontSize:"0.88rem"}}>No posts pinned yet.{user&&isAdmin(user)?" Use the admin panel above to pin a post.":""}</div></div>}
 
-        {/* Live feed */}
         <div style={{marginBottom:28}}>
           <div style={{fontSize:"0.7rem",fontWeight:700,color:muted,letterSpacing:"0.08em",marginBottom:12,display:"flex",alignItems:"center",gap:8}}><span>🐦</span> LIVE FEED</div>
-          <div className="x-card" style={{background:card,border:"1px solid "+border,borderRadius:16,overflow:"hidden",boxShadow:"0 4px 20px rgba(0,0,0,0.4)"}}>
-            <div style={{padding:"14px 16px",background:"rgba(255,255,255,0.02)",borderBottom:"1px solid "+border,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div className="x-card" style={{background:card,border:"1px solid rgba(255,255,255,0.08)",borderRadius:16,overflow:"hidden",boxShadow:"0 4px 20px rgba(0,0,0,0.4)"}}>
+            <div style={{padding:"14px 16px",background:"rgba(255,255,255,0.02)",borderBottom:"1px solid rgba(255,255,255,0.08)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
                 <div style={{width:24,height:24,borderRadius:"50%",background:"#000",display:"flex",alignItems:"center",justifyContent:"center",border:"1px solid rgba(255,255,255,0.1)"}}>
                   <svg viewBox="0 0 24 24" style={{width:13,height:13,fill:"#fff"}}><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.259 5.63 5.905-5.63z"/></svg>
@@ -7639,13 +7636,12 @@ function XCommunityPage({go,user}:{go:Function;user:any}) {
           </div>
         </div>
 
-        {/* Suggested accounts */}
         <div style={{marginBottom:20}}>
           <div style={{fontSize:"0.7rem",fontWeight:700,color:muted,letterSpacing:"0.08em",marginBottom:12,display:"flex",alignItems:"center",gap:8}}><span>👥</span> SUGGESTED RESEARCH ACCOUNTS</div>
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
             {SUGGESTED.map((acct,i)=>(
               <a key={i} href={`https://x.com/${acct.handle}`} target="_blank" rel="noopener noreferrer" className="account-chip x-card"
-                style={{display:"flex",alignItems:"center",gap:12,background:card,border:"1px solid "+border,borderRadius:14,padding:"12px 14px",textDecoration:"none",transition:"all .2s",animationDelay:`${i*0.07}s`,boxShadow:"0 2px 12px rgba(0,0,0,0.3)"}}>
+                style={{display:"flex",alignItems:"center",gap:12,background:card,border:"1px solid rgba(255,255,255,0.08)",borderRadius:14,padding:"12px 14px",textDecoration:"none",transition:"all .2s",boxShadow:"0 2px 12px rgba(0,0,0,0.3)"}}>
                 <div style={{width:36,height:36,borderRadius:"50%",background:"linear-gradient(135deg,#1a1a2e,#16213e)",display:"flex",alignItems:"center",justifyContent:"center",border:"1px solid rgba(255,255,255,0.1)",flexShrink:0}}>
                   <svg viewBox="0 0 24 24" style={{width:16,height:16,fill:"rgba(255,255,255,0.7)"}}><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.259 5.63 5.905-5.63z"/></svg>
                 </div>
@@ -7667,422 +7663,7 @@ function XCommunityPage({go,user}:{go:Function;user:any}) {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════
-// FLASH SALE BANNER — admin-controlled, shows sitewide
-// ═══════════════════════════════════════════════════════════════
-const FLASH_KEY = "aot_flash_sale";
-
-interface FlashSale {
-  active: boolean;
-  message: string;
-  discount: string;
-  code: string;
-  endsAt: string; // ISO string or ""
-  color: string;  // "red" | "green" | "gold" | "blue"
-}
-
-function getFlashSale(): FlashSale | null {
-  try {
-    const raw = localStorage.getItem(FLASH_KEY);
-    if (!raw) return null;
-    const d = JSON.parse(raw);
-    if (!d || !d.active) return null;
-    if (d.endsAt && d.endsAt !== "" && new Date(d.endsAt).getTime() < Date.now()) return null;
-    return d;
-  } catch { return null; }
-}
-
-function saveFlashSale(sale: FlashSale) {
-  try { localStorage.setItem(FLASH_KEY, JSON.stringify(sale)); } catch {}
-  try { localStorage.setItem("aot_flash_ping", String(Date.now())); } catch {}
-  // Same-tab instant update (StorageEvent doesn't fire on same tab)
-  try { window.dispatchEvent(new CustomEvent("aot_flash_update")); } catch {}
-}
-
-// The sitewide banner rendered at the top of the page
-function FlashSaleBanner() {
-  const [sale, setSale] = useState<FlashSale|null>(null);
-  const [dismissed, setDismissed] = useState(false);
-  const [timeLeft, setTimeLeft] = useState("");
-
-  const load = () => {
-    setSale(getFlashSale());
-    // Re-show banner if admin re-saved (clear dismissed)
-    try { if (!sessionStorage.getItem("aot_flash_dismissed")) setDismissed(false); } catch {}
-  };
-
-  const handleDismiss = () => {
-    setDismissed(true);
-    try { sessionStorage.setItem("aot_flash_dismissed", "1"); } catch {}
-  };
-
-  useEffect(() => {
-    load();
-    const iv = setInterval(load, 2000);
-    // Other tabs
-    const onStore = (e: StorageEvent) => { if(e.key==="aot_flash_ping") load(); };
-    // Same tab — fired by saveFlashSale
-    const onCustom = () => {
-      try { sessionStorage.removeItem("aot_flash_dismissed"); } catch {}
-      setDismissed(false);
-      load();
-    };
-    window.addEventListener("storage", onStore);
-    window.addEventListener("aot_flash_update", onCustom);
-    return () => {
-      clearInterval(iv);
-      window.removeEventListener("storage", onStore);
-      window.removeEventListener("aot_flash_update", onCustom);
-    };
-  }, []);
-
-  // Countdown timer
-  useEffect(() => {
-    const endsAt = sale && sale.endsAt ? sale.endsAt : null;
-    if (!endsAt) { setTimeLeft(""); return; }
-    const tick = () => {
-      try {
-        const diff = new Date(endsAt).getTime() - Date.now();
-        if (diff <= 0) { setTimeLeft(""); return; }
-        const h = Math.floor(diff/3600000);
-        const m = Math.floor((diff%3600000)/60000);
-        const s = Math.floor((diff%60000)/1000);
-        setTimeLeft(h>0 ? String(h)+"h "+String(m)+"m "+String(s)+"s" : String(m)+"m "+String(s)+"s");
-      } catch { setTimeLeft(""); }
-    };
-    tick();
-    const iv = setInterval(tick, 1000);
-    return () => clearInterval(iv);
-  }, [sale ? sale.endsAt : null]);
-
-  if (dismissed) return null;
-  if (!sale) return null;
-
-  const colors: Record<string,{bg:string;border:string;text:string;accent:string}> = {
-    red:   {bg:"linear-gradient(90deg,#7f0000,#c0392b,#7f0000)",border:"rgba(255,100,100,0.4)",text:"#fff",accent:"#ffd6d6"},
-    green: {bg:"linear-gradient(90deg,#0a3d1f,#1a7a3a,#0a3d1f)",border:"rgba(59,232,176,0.4)",text:"#fff",accent:"#3be8b0"},
-    gold:  {bg:"linear-gradient(90deg,#5c3a00,#c07800,#5c3a00)",border:"rgba(255,209,102,0.4)",text:"#fff",accent:"#ffd166"},
-    blue:  {bg:"linear-gradient(90deg,#0a1a4a,#1a3a8a,#0a1a4a)",border:"rgba(79,142,247,0.4)",text:"#fff",accent:"#4f8ef7"},
-  };
-  const col = colors[sale.color] || colors.red;
-
-  return (
-    <div style={{
-      background:col.bg,borderBottom:`1px solid ${col.border}`,
-      padding:"9px 44px 9px 16px",display:"flex",alignItems:"center",
-      justifyContent:"center",gap:12,flexWrap:"wrap" as const,
-      position:"fixed" as const,top:0,left:0,right:0,zIndex:1000,
-      boxShadow:"0 2px 20px rgba(0,0,0,0.4)",
-    }}>
-      <span style={{fontSize:"1.1rem"}}>⚡</span>
-      <span style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"0.92rem",color:col.text,letterSpacing:"-.01em"}}>
-        {sale.message}
-      </span>
-      {sale.discount && (
-        <span style={{background:col.accent,color:"#0e0e0e",fontWeight:900,fontSize:"0.85rem",padding:"2px 10px",borderRadius:100}}>
-          {sale.discount} OFF
-        </span>
-      )}
-      {sale.code && (
-        <span style={{fontFamily:"monospace",background:"rgba(255,255,255,0.15)",color:col.accent,fontWeight:700,fontSize:"0.82rem",padding:"2px 10px",borderRadius:6,letterSpacing:"0.1em",border:`1px solid ${col.accent}`,cursor:"pointer"}}
-          onClick={()=>{navigator.clipboard?.writeText(sale.code).catch(()=>{}); alert("Code copied: "+sale.code);}}>
-          {sale.code} — tap to copy
-        </span>
-      )}
-      {timeLeft && (
-        <span style={{display:"inline-flex",alignItems:"center",gap:4,background:"rgba(0,0,0,0.3)",borderRadius:8,padding:"3px 10px",marginLeft:4}}>
-          <span style={{fontSize:"0.6rem",color:col.accent,fontWeight:600,opacity:0.8,letterSpacing:"0.06em"}}>ENDS</span>
-          <span style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"0.88rem",color:col.accent,letterSpacing:"0.03em"}}>{timeLeft}</span>
-        </span>
-      )}
-      <button onClick={handleDismiss}
-        style={{position:"absolute" as const,right:12,top:"50%",transform:"translateY(-50%)",
-          background:"rgba(255,255,255,0.15)",border:"none",color:"#fff",
-          borderRadius:"50%",width:22,height:22,cursor:"pointer",fontSize:"0.8rem",
-          display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>✕</button>
-    </div>
-  );
-}
-
-// Admin control panel — appears in dashboard under "Flash Sale" tab
-function FlashSaleAdmin() {
-  const defaultSale: FlashSale = { active:false, message:"🔥 Flash Sale — Limited Time!", discount:"20%", code:"FLASH20", endsAt:"", color:"red" };
-  const [sale, setSaleState] = useState<FlashSale>(() => {
-    try { return JSON.parse(localStorage.getItem(FLASH_KEY)||"null") || defaultSale; } catch { return defaultSale; }
-  });
-  const [saved, setSaved] = useState(false);
-
-  const update = (k: keyof FlashSale, v: any) => setSaleState(p=>({...p,[k]:v}));
-
-  const handleSave = () => {
-    saveFlashSale(sale);
-    setSaved(true);
-    setTimeout(()=>setSaved(false), 2500);
-  };
-
-  const fieldStyle = {
-    width:"100%",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.12)",
-    borderRadius:10,padding:"10px 13px",color:"#fff",fontFamily:"'DM Sans',sans-serif",
-    fontSize:"0.88rem",outline:"none",boxSizing:"border-box" as const,
-  };
-  const labelStyle = {fontSize:"0.75rem",fontWeight:700,color:"rgba(255,255,255,0.5)",marginBottom:5,display:"block" as const,textTransform:"uppercase" as const,letterSpacing:"0.05em"};
-  const rowStyle = {display:"flex",flexDirection:"column" as const,gap:5};
-
-  return (
-    <div>
-      <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1.1rem",marginBottom:4}}>Flash Sale Banner</div>
-      <div style={{fontSize:"0.82rem",color:"rgba(255,255,255,0.4)",marginBottom:20}}>
-        Control the sitewide promotional banner. Changes go live instantly.
-      </div>
-
-      {/* Active toggle */}
-      <div style={{background:"#1c1c1c",borderRadius:14,padding:16,marginBottom:16,border:"1px solid rgba(255,255,255,0.07)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-        <div>
-          <div style={{fontWeight:700,fontSize:"0.9rem"}}>Banner Status</div>
-          <div style={{fontSize:"0.75rem",color:"rgba(255,255,255,0.4)",marginTop:2}}>{sale.active?"Live sitewide — visible to all visitors":"Currently hidden"}</div>
-        </div>
-        <button onClick={()=>update("active",!sale.active)}
-          style={{background:sale.active?"#3be8b0":"rgba(255,255,255,0.08)",color:sale.active?"#0e0e0e":"rgba(255,255,255,0.5)",
-            border:"none",borderRadius:100,padding:"8px 20px",fontWeight:800,cursor:"pointer",fontSize:"0.85rem",transition:"all .2s"}}>
-          {sale.active ? "● LIVE" : "○ Off"}
-        </button>
-      </div>
-
-      <div style={{display:"flex",flexDirection:"column",gap:14}}>
-        <div style={rowStyle}>
-          <label style={labelStyle}>Banner Message</label>
-          <input value={sale.message} onChange={e=>update("message",e.target.value)} style={fieldStyle} placeholder="🔥 Flash Sale — Limited Time!"/>
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-          <div style={rowStyle}>
-            <label style={labelStyle}>Discount (shown as badge)</label>
-            <input value={sale.discount} onChange={e=>update("discount",e.target.value)} style={fieldStyle} placeholder="20%"/>
-          </div>
-          <div style={rowStyle}>
-            <label style={labelStyle}>Coupon Code</label>
-            <input value={sale.code} onChange={e=>update("code",e.target.value.toUpperCase())} style={fieldStyle} placeholder="FLASH20"/>
-          </div>
-        </div>
-        <div style={rowStyle}>
-          <label style={labelStyle}>Sale Ends At (optional countdown)</label>
-          <input type="datetime-local" value={sale.endsAt ? sale.endsAt.slice(0,16) : ""} onChange={e=>update("endsAt",e.target.value?new Date(e.target.value).toISOString():"")} style={fieldStyle}/>
-          <div style={{fontSize:"0.7rem",color:"rgba(255,255,255,0.3)"}}>Leave blank for no countdown.</div>
-        </div>
-        <div style={rowStyle}>
-          <label style={labelStyle}>Banner Color</label>
-          <div style={{display:"flex",gap:10,flexWrap:"wrap" as const}}>
-            {(["red","green","gold","blue"] as const).map(c=>(
-              <button key={c} onClick={()=>update("color",c)}
-                style={{padding:"7px 18px",borderRadius:100,border:sale.color===c?"2px solid #fff":"2px solid transparent",
-                  background:c==="red"?"#c0392b":c==="green"?"#1a7a3a":c==="gold"?"#c07800":"#1a3a8a",
-                  color:"#fff",fontWeight:700,fontSize:"0.8rem",cursor:"pointer",textTransform:"capitalize" as const}}>
-                {c}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Preview */}
-        {sale.message && (
-          <div style={{borderRadius:10,overflow:"hidden",border:"1px solid rgba(255,255,255,0.1)"}}>
-            <div style={{fontSize:"0.68rem",color:"rgba(255,255,255,0.3)",padding:"4px 10px",background:"rgba(255,255,255,0.03)"}}>PREVIEW</div>
-            <div style={{
-              background:({"red":"linear-gradient(90deg,#7f0000,#c0392b,#7f0000)","green":"linear-gradient(90deg,#0a3d1f,#1a7a3a,#0a3d1f)","gold":"linear-gradient(90deg,#5c3a00,#c07800,#5c3a00)","blue":"linear-gradient(90deg,#0a1a4a,#1a3a8a,#0a1a4a)"})[sale.color as string]||"linear-gradient(90deg,#7f0000,#c0392b,#7f0000)",
-              padding:"10px 16px",display:"flex",alignItems:"center",gap:10,flexWrap:"wrap" as const}}>
-              <span>⚡</span>
-              <span style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"0.9rem",color:"#fff"}}>{sale.message}</span>
-              {sale.discount&&<span style={{background:"rgba(255,255,255,0.25)",fontWeight:900,fontSize:"0.82rem",padding:"2px 10px",borderRadius:100,color:"#fff"}}>{sale.discount} OFF</span>}
-              {sale.code&&<span style={{fontFamily:"monospace",background:"rgba(255,255,255,0.15)",fontWeight:700,fontSize:"0.8rem",padding:"2px 10px",borderRadius:6,color:"#fff",letterSpacing:"0.1em"}}>{sale.code}</span>}
-            </div>
-          </div>
-        )}
-
-        <button onClick={handleSave}
-          style={{background:saved?"#3be8b0":"#ff6b6b",color:"#0e0e0e",border:"none",borderRadius:12,
-            padding:"13px",fontFamily:"inherit",fontWeight:800,fontSize:"0.95rem",cursor:"pointer",
-            transition:"all .2s",marginTop:4}}>
-          {saved ? "✅ Saved & Live!" : "Save Banner Settings"}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function DosingCalculatorPage({go}:{go:Function}){
-  const {dark}=useDarkMode();
-  const card=dark?"#141414":"#ffffff";
-  const muted=dark?"rgba(255,255,255,0.5)":"rgba(0,0,0,0.45)";
-  const inp={width:"100%",background:dark?"#1e1e1e":"#f0f0f0",border:"1px solid rgba(128,128,128,0.2)",borderRadius:12,padding:"14px 16px",color:dark?"#fff":"#111",fontFamily:"inherit",fontSize:"1rem",boxSizing:"border-box" as const,outline:"none"};
-
-  const COMPOUNDS=[
-    {name:"BPC-157",     vialUnit:"mg",  doseUnit:"mcg", vialToBase:1000, doseToBase:1,    typical:"250–500 mcg", suggestWater:[1,2]},
-    {name:"TB-500",      vialUnit:"mg",  doseUnit:"mg",  vialToBase:1,    doseToBase:1,    typical:"2–5 mg",      suggestWater:[1,2]},
-    {name:"Semaglutide", vialUnit:"mg",  doseUnit:"mg",  vialToBase:1,    doseToBase:1,    typical:"0.25–1 mg",   suggestWater:[1,2]},
-    {name:"Tirzepatide", vialUnit:"mg",  doseUnit:"mg",  vialToBase:1,    doseToBase:1,    typical:"2.5–5 mg",    suggestWater:[1,2]},
-    {name:"Retatrutide", vialUnit:"mg",  doseUnit:"mg",  vialToBase:1,    doseToBase:1,    typical:"2–8 mg",      suggestWater:[1,2]},
-    {name:"CJC-1295",    vialUnit:"mg",  doseUnit:"mcg", vialToBase:1000, doseToBase:1,    typical:"100–300 mcg", suggestWater:[1,2]},
-    {name:"Ipamorelin",  vialUnit:"mg",  doseUnit:"mcg", vialToBase:1000, doseToBase:1,    typical:"100–300 mcg", suggestWater:[1,2]},
-    {name:"Sermorelin",  vialUnit:"mg",  doseUnit:"mcg", vialToBase:1000, doseToBase:1,    typical:"200–500 mcg", suggestWater:[1,2]},
-    {name:"Epithalon",   vialUnit:"mg",  doseUnit:"mg",  vialToBase:1,    doseToBase:1,    typical:"5–10 mg",     suggestWater:[1,2]},
-    {name:"GHK-Cu",      vialUnit:"mg",  doseUnit:"mg",  vialToBase:1,    doseToBase:1,    typical:"1–5 mg",      suggestWater:[1,2]},
-    {name:"NAD+",        vialUnit:"mg",  doseUnit:"mg",  vialToBase:1,    doseToBase:1,    typical:"100–500 mg",  suggestWater:[2,5]},
-    {name:"IGF-1 LR3",   vialUnit:"mg",  doseUnit:"mcg", vialToBase:1000, doseToBase:1,    typical:"20–100 mcg",  suggestWater:[1,2]},
-    {name:"Selank",      vialUnit:"mg",  doseUnit:"mcg", vialToBase:1000, doseToBase:1,    typical:"250–500 mcg", suggestWater:[1,2]},
-    {name:"Semax",       vialUnit:"mg",  doseUnit:"mcg", vialToBase:1000, doseToBase:1,    typical:"200–600 mcg", suggestWater:[1,2]},
-  ];
-
-  const [compound, setCompound]=React.useState(COMPOUNDS[0]);
-  const [vialSize, setVialSize]=React.useState("");    // number on vial label (in vialUnit)
-  const [desiredDose, setDesiredDose]=React.useState(""); // dose they want (in doseUnit)
-
-  const vialNum = parseFloat(vialSize);
-  const doseNum = parseFloat(desiredDose);
-
-  // Convert everything to base unit (mcg or mg consistently)
-  const vialBase  = vialNum  > 0 ? vialNum  * compound.vialToBase  : null; // total in doseUnit
-  const doseBase  = doseNum  > 0 ? doseNum  * compound.doseToBase  : null;
-
-  // Recommended water amounts → pick the one that gives cleanest draw volume
-  // We suggest 2 water options and show both
-  const results = (vialBase && doseBase) ? compound.suggestWater.map(ml => {
-    const concPerMl = vialBase / ml;          // doseUnit per mL
-    const drawMl    = doseBase / concPerMl;   // mL to draw
-    const drawIU    = drawMl * 100;           // IU on U-100 syringe
-    const shots     = Math.floor(vialBase / doseBase);
-    return {ml, drawMl, drawIU, shots, concPerMl};
-  }) : null;
-
-  const ready = results !== null;
-
-  return <div style={{maxWidth:520,margin:"0 auto",padding:"24px 20px 100px"}}>
-    <div style={{textAlign:"center",marginBottom:28}}>
-      <h1 style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"clamp(1.5rem,4vw,2rem)",margin:"0 0 6px"}}>💊 Dosing Calculator</h1>
-      <p style={{color:muted,fontSize:"0.85rem",margin:0}}>Enter your vial and dose — we handle the rest.</p>
-    </div>
-
-    {/* Step 1 — Pick compound */}
-    <div style={{background:card,borderRadius:20,padding:"20px",marginBottom:14,boxShadow:"0 2px 12px rgba(0,0,0,0.08)"}}>
-      <div style={{fontWeight:700,fontSize:"0.8rem",color:"#3be8b0",letterSpacing:"0.08em",marginBottom:10}}>STEP 1 — Select compound</div>
-      <div style={{display:"flex",flexWrap:"wrap" as const,gap:8}}>
-        {COMPOUNDS.map(c=>(
-          <button key={c.name} onClick={()=>{setCompound(c);setVialSize("");setDesiredDose("");}}
-            style={{background:compound.name===c.name?"#3be8b0":dark?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.06)",
-              color:compound.name===c.name?"#0e0e0e":dark?"rgba(255,255,255,0.8)":"rgba(0,0,0,0.7)",
-              border:"none",borderRadius:100,padding:"6px 14px",fontFamily:"inherit",fontWeight:600,
-              fontSize:"0.8rem",cursor:"pointer",transition:"all .15s"}}>
-            {c.name}
-          </button>
-        ))}
-      </div>
-    </div>
-
-    {/* Step 2 — Vial label */}
-    <div style={{background:card,borderRadius:20,padding:"20px",marginBottom:14,boxShadow:"0 2px 12px rgba(0,0,0,0.08)"}}>
-      <div style={{fontWeight:700,fontSize:"0.8rem",color:"#3be8b0",letterSpacing:"0.08em",marginBottom:6}}>STEP 2 — What does your vial say?</div>
-      <p style={{color:muted,fontSize:"0.8rem",margin:"0 0 12px"}}>Just enter the number from the label. e.g. if it says <strong style={{color:dark?"#fff":"#111"}}>"5{compound.vialUnit}"</strong> enter <strong style={{color:dark?"#fff":"#111"}}>5</strong></p>
-      <div style={{display:"flex",alignItems:"center",gap:10}}>
-        <input type="number" inputMode="decimal" value={vialSize} onChange={e=>setVialSize(e.target.value)} placeholder="e.g. 5" style={{...inp,flex:1}}/>
-        <span style={{fontWeight:800,fontSize:"1.1rem",color:"#3be8b0",minWidth:44}}>{compound.vialUnit}</span>
-      </div>
-    </div>
-
-    {/* Step 3 — Desired dose */}
-    <div style={{background:card,borderRadius:20,padding:"20px",marginBottom:20,boxShadow:"0 2px 12px rgba(0,0,0,0.08)"}}>
-      <div style={{fontWeight:700,fontSize:"0.8rem",color:"#3be8b0",letterSpacing:"0.08em",marginBottom:6}}>STEP 3 — What dose do you want?</div>
-      <p style={{color:muted,fontSize:"0.8rem",margin:"0 0 4px"}}>Typical for {compound.name}: <strong style={{color:dark?"#fff":"#111"}}>{compound.typical}</strong></p>
-      <p style={{color:muted,fontSize:"0.78rem",margin:"0 0 12px"}}>Enter your target in {compound.doseUnit}.</p>
-      <div style={{display:"flex",alignItems:"center",gap:10}}>
-        <input type="number" inputMode="decimal" value={desiredDose} onChange={e=>setDesiredDose(e.target.value)} placeholder={compound.doseUnit==="mcg"?"e.g. 250":"e.g. 1"} style={{...inp,flex:1}}/>
-        <span style={{fontWeight:800,fontSize:"1.1rem",color:"#3be8b0",minWidth:44}}>{compound.doseUnit}</span>
-      </div>
-    </div>
-
-    {/* RESULTS */}
-    {ready?<div>
-      <div style={{fontWeight:700,fontSize:"0.8rem",color:"#3be8b0",letterSpacing:"0.08em",marginBottom:10,textAlign:"center"}}>YOUR MIXING OPTIONS</div>
-      {results!.map((r,i)=>(
-        <div key={i} style={{background:i===0?"linear-gradient(135deg,rgba(59,232,176,0.12),rgba(168,85,247,0.08))":card,
-          border:i===0?"2px solid rgba(59,232,176,0.4)":"1px solid rgba(128,128,128,0.15)",
-          borderRadius:20,padding:"20px",marginBottom:12,boxShadow:"0 2px 12px rgba(0,0,0,0.08)"}}>
-          {i===0&&<div style={{fontSize:"0.72rem",fontWeight:700,color:"#3be8b0",marginBottom:8}}>⭐ RECOMMENDED</div>}
-          <div style={{marginBottom:12}}>
-            <span style={{fontWeight:700,fontSize:"0.9rem"}}>Add </span>
-            <span style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1.4rem",color:"#3be8b0"}}>{r.ml} mL</span>
-            <span style={{fontWeight:700,fontSize:"0.9rem"}}> of BAC water to your vial</span>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
-            <div style={{background:dark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.05)",borderRadius:12,padding:"10px",textAlign:"center"}}>
-              <div style={{fontSize:"0.68rem",color:muted,marginBottom:3}}>DRAW</div>
-              <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1.2rem"}}>{r.drawMl<0.01?"<0.01":r.drawMl.toFixed(2)}</div>
-              <div style={{fontSize:"0.7rem",color:muted}}>mL</div>
-            </div>
-            <div style={{background:dark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.05)",borderRadius:12,padding:"10px",textAlign:"center"}}>
-              <div style={{fontSize:"0.68rem",color:muted,marginBottom:3}}>ON SYRINGE</div>
-              <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1.2rem"}}>{r.drawIU.toFixed(0)}</div>
-              <div style={{fontSize:"0.7rem",color:muted}}>IU / units</div>
-            </div>
-            <div style={{background:dark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.05)",borderRadius:12,padding:"10px",textAlign:"center"}}>
-              <div style={{fontSize:"0.68rem",color:muted,marginBottom:3}}>SHOTS</div>
-              <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1.2rem"}}>{r.shots}</div>
-              <div style={{fontSize:"0.7rem",color:muted}}>per vial</div>
-            </div>
-          </div>
-        </div>
-      ))}
-      <div style={{background:"rgba(255,193,7,0.06)",border:"1px solid rgba(255,193,7,0.2)",borderRadius:14,padding:"12px 16px",fontSize:"0.78rem",color:"rgba(255,193,7,0.85)",lineHeight:1.6}}>
-        💡 <strong>How to read this:</strong> Add the BAC water amount to your vial. Then draw the mL shown using a standard insulin syringe — the "IU/units" number is what you read on the syringe barrel.
-      </div>
-    </div>:<div style={{background:card,borderRadius:20,padding:"28px",textAlign:"center",boxShadow:"0 2px 12px rgba(0,0,0,0.08)"}}>
-      <div style={{fontSize:"2rem",marginBottom:8}}>☝️</div>
-      <p style={{color:muted,fontSize:"0.85rem",margin:0}}>Complete the 3 steps above — your result appears instantly.</p>
-    </div>}
-
-    <p style={{color:muted,fontSize:"0.72rem",textAlign:"center",lineHeight:1.6,fontStyle:"italic",marginTop:16}}>For research use only. Not medical advice.</p>
-  </div>;
-}
-
-
-// ═══════════════════════════════════════════════════════════════
-// VIDEO TUTORIAL LIBRARY
-// ═══════════════════════════════════════════════════════════════
-const VIDEO_TUTORIALS = [
-  // ── DR. JONES DC — FOUNDATIONS (primary channel) ─────────────────────────
-  { id:"dr-prepare-inject",  title:"Doctor Explains How to CORRECTLY Prepare & Inject Peptides", compound:"All Products", duration:"11:30", thumb:"👨‍⚕️", ytId:"L65S1xmKY44", level:"Beginner",     desc:"Stop wasting expensive peptides. Exact gear list, reconstitution technique, injection method — the right way to start any peptide research.", channel:"Dr. Jones DC" },
-  { id:"dr-beginners-guide", title:"Everything You NEED to Know Before Starting Peptides", compound:"All Products", duration:"14:22", thumb:"📋", ytId:"uf4FSQljPHw", level:"Beginner",     desc:"Risks, rewards, and the foundational steps every beginner researcher should understand before opening a vial.", channel:"Dr. Jones DC" },
-  { id:"dr-top10-2026",      title:"Top 10 Peptides for 2026", compound:"All Products", duration:"18:05", thumb:"🏆", ytId:"M7BZtfST4yM", level:"Beginner",     desc:"Dr. Jones breaks down which peptides are worth researching in 2026 — and why. Covers access, legislation, and which compounds are most researched.", channel:"Dr. Jones DC" },
-  { id:"dr-personally-takes",title:"Doctor Explains What Peptides He Personally Takes & Why", compound:"All Products", duration:"16:40", thumb:"💊", ytId:"jURAZT5e7Cw", level:"Intermediate", desc:"A 4-tier peptide system from a physician who actually uses these compounds. Covers stacking logic, dosing, and how to think about compound selection.", channel:"Dr. Jones DC" },
-  { id:"dr-best-worst",      title:"Doctor Explains Best & Worst Peptides to Experiment With 2026", compound:"All Products", duration:"19:12", thumb:"⚖️", ytId:"07NtgDf0p0w", level:"Intermediate", desc:"The criteria for deciding which peptides are safe to explore — and which ones to avoid entirely. A practical risk/reward framework.", channel:"Dr. Jones DC" },
-  { id:"dr-lifestyle-hacks", title:"Want Better Results From Your Peptides? Implement These Lifestyle Hacks", compound:"All Products", duration:"13:55", thumb:"⚡", ytId:"RyZ5IpBXwxI", level:"Intermediate", desc:"Why some researchers see no results — it's not the peptides. Diet, sleep, timing, and lifestyle factors that determine whether your research succeeds.", channel:"Dr. Jones DC" },
-  { id:"dr-top5-medicine",   title:"Doctor Reveals Top 5 Peptides Changing Medicine Forever", compound:"All Products", duration:"15:30", thumb:"🔬", ytId:"yZgsUR2F6TI", level:"Beginner",     desc:"The five peptides getting the most serious clinical attention right now — and why they matter for researchers studying cutting-edge compounds.", channel:"Dr. Jones DC" },
-  { id:"dr-peptide-laws",    title:"Peptide Laws Just Changed Again — Doctor Explains What's Legal Now", compound:"All Products", duration:"17:20", thumb:"⚖️", ytId:"uFyet3w0sJk", level:"Beginner",     desc:"FDA enforcement updates, April 2026 regulatory changes, RFK Jr. impact — what's actually legal for research right now and what to watch.", channel:"Dr. Jones DC" },
-  // ── DR. JONES DC — GLP METABOLIC CLASS ──────────────────────────────────
-  { id:"dr-retrat-stack",    title:"Doctor Explains What to Stack with Retatrutide to Maximize Results", compound:"GLP-3 R (Retatrutide)", duration:"14:22", thumb:"🔥", ytId:"NdGKQ4aH7hI", level:"Intermediate", desc:"Strategic stacking with Retatrutide: BPC-157, GHK-Cu, and longevity compound combinations. When to add, what to avoid, and how to structure the protocol.", channel:"Dr. Jones DC" },
-  { id:"dr-glp-shot-guide",  title:"How to Take a GLP-1 Shot — Step-by-Step Routine", compound:"GLP-1 / GLP-2 T / GLP-3 R", duration:"7:18", thumb:"💉", ytId:"dxkllues8-w", level:"Beginner",     desc:"Covers Semaglutide, Tirzepatide, and Retatrutide — exactly how to prepare and inject GLP-1 class peptides including titration schedules.", channel:"Dr. Jones DC" },
-  // ── DR. JONES DC — GH AXIS ───────────────────────────────────────────────
-  { id:"dr-cjc-ipa-king",    title:"Doctor Explains Why CJC/Ipamorelin is KING of GH Peptides", compound:"CJC-1295 / Ipamorelin", duration:"13:44", thumb:"🔬", ytId:"ErI8SQgVKcU", level:"Intermediate", desc:"Why CJC-1295/Ipamorelin is the most trusted GH research stack. Dr. Jones covers the mechanism, synergy, and how to use it correctly.", channel:"Dr. Jones DC" },
-  { id:"dr-gh-deep-dive",    title:"CJC-1295, Ipamorelin, Tesamorelin & Sermorelin — Deep Dive", compound:"CJC-1295 / Ipamorelin / Tesamorlin", duration:"22:18", thumb:"⚗️", ytId:"cM9kNK9llfE", level:"Intermediate", desc:"Full deep dive into the GH axis secretagogues. Differences, mechanisms, and how to choose between them for research protocols.", channel:"Dr. Jones DC" },
-  { id:"dr-lean-muscle",     title:"Doctor Reveals the Best Peptide Stack for Lean Muscle Growth 2026", compound:"CJC-1295 / Ipamorelin / IGF-1 LR3", duration:"16:50", thumb:"💪", ytId:"jA6IRZ9xZvU", level:"Intermediate", desc:"The smartest system for muscle-focused peptide research in 2026. Covers GH secretagogues, IGF-1, and how to build an effective protocol.", channel:"Dr. Jones DC" },
-  // ── DR. JONES DC — REPAIR & GLOW STACKS ─────────────────────────────────
-  { id:"dr-glow-wolverine",  title:"Doctor Reacts to Most Powerful Peptide Stacks — GLOW, KLOW & Wolverine", compound:"Glow Complex / BPC-157 / TB-500 / GHK-CU", duration:"19:35", thumb:"🌟", ytId:"sOduMXXMc28", level:"Intermediate", desc:"Dr. Jones breaks down the GLOW, GLO, and Wolverine stacks — what works, what's overhyped, and how to use them correctly for research.", channel:"Dr. Jones DC" },
-  // ── RECONSTITUTION GUIDES (supporting channel for technique) ─────────────
-  { id:"reconst-calc",       title:"Peptide Reconstitution Calculator — 45+ Compounds", compound:"All Products", duration:"9:05", thumb:"🧮", ytId:"kMBxX2jaiKE", level:"Beginner",     desc:"Free calculator walkthrough for BPC-157, TB-500, Semaglutide, Tirzepatide, Ipamorelin, CJC-1295 and 45+ compounds. No math required.", channel:"Peptide Research" },
-  { id:"bpc-complete",       title:"BPC-157 — A Complete How-To Guide (Stacking, Dosing & Reconstitution)", compound:"BPC-157", duration:"18:40", thumb:"🧬", ytId:"0GpNUIdDric", level:"Intermediate", desc:"Stacking with TB-500, terminology, dosing schedules, reconstitution calculations, and injection technique — comprehensive single-compound guide.", channel:"Peptide Education" },
-  { id:"bpc-tb-wolverine",   title:"BPC-157 + TB-500 Wolverine Stack — Measure & Inject Guide", compound:"BPC-157 / TB-500", duration:"12:08", thumb:"🛠️", ytId:"rNEgtpZnlwg", level:"Intermediate", desc:"Side-by-step reconstitution and injection guide for the BPC-157 + TB-500 recovery stack. Simple, straight forward, take your recovery to the next level.", channel:"Peptide Education" },
-  { id:"tb500-clinical",     title:"Unlocking TB-500 — Dosage, Benefits & Clinical Success", compound:"TB-500", duration:"16:50", thumb:"🛠️", ytId:"OffXGrrzI3A", level:"Intermediate", desc:"Dr. Adam Sewell's clinical training on TB-500: regenerative medicine applications, dosing protocols, and patient outcomes.", channel:"Clinical" },
-  { id:"cjc-ipa-recon",      title:"How to Reconstitute the Ipamorelin & CJC-1295 Stack", compound:"CJC-1295 / Ipamorelin Blend", duration:"9:16", thumb:"⚡", ytId:"ycvK3qDdIkk", level:"Beginner",     desc:"Step-by-step reconstitution for both CJC-1295 and Ipamorelin together, including draw volume calculation and injection timing.", channel:"Peptide Education" },
-  { id:"tesamorelin-recon",  title:"How to Reconstitute 5mg Tesamorelin — Step by Step", compound:"Tesamorlin", duration:"7:45", thumb:"💪", ytId:"VMUp3bLN4b4", level:"Beginner",     desc:"Complete mixing guide for Tesamorelin with concentration math, BAC water ratios, and storage best practices.", channel:"Peptide Education" },
-  { id:"igf1-recon",         title:"How to Reconstitute IGF-1 LR3 — Beginner Step-by-Step", compound:"IGF-1 LR3", duration:"8:20", thumb:"📈", ytId:"CiB8AypKheo", level:"Beginner",     desc:"Easy step-by-step tutorial for properly reconstituting IGF-1 LR3 using bacteriostatic water. Covers micro-dosing math.", channel:"Peptide Education" },
-  { id:"ghkcu-recon",        title:"GHK-Cu — Reconstitution & Dilution Guide (Reduce Injection Pain)", compound:"GHK-CU", duration:"10:18", thumb:"✨", ytId:"BOmmLfsMFtE", level:"Beginner",     desc:"How to reconstitute GHK-Cu with dilution strategies to specifically reduce injection site burning — a common issue with this copper peptide.", channel:"Peptide Education" },
-  { id:"nad-recon",          title:"How to Reconstitute & Inject NAD+", compound:"NAD+", duration:"5:44", thumb:"⚗️", ytId:"S43wXN12uKE", level:"Beginner",     desc:"Nurse Cassie shows exactly how to mix and inject NAD+ at home — step by step from vial to syringe.", channel:"Clinical" },
-  { id:"motsc-recon",        title:"How to Mix MOTS-c — Optimal Dosage & Reconstitution", compound:"MOTS-c", duration:"9:12", thumb:"🔋", ytId:"snq8c5SSSww", level:"Beginner",     desc:"5mg and 10mg MOTS-c reconstitution with best protocol ranges and mitochondrial health research context.", channel:"Peptide Education" },
-  { id:"ss31-recon",         title:"How to Reconstitute SS-31 Peptide — Full Mixing Guide", compound:"SS-31", duration:"8:40", thumb:"🔋", ytId:"-4_4zreVVGs", level:"Beginner",     desc:"Complete reconstitution guide for SS-31 (Elamipretide). Covers vial prep, BAC water volume, and syringe draw.", channel:"Peptide Education" },
-  { id:"ss31-motsc-proto",   title:"Updated SS-31 + MOTS-c Protocol 2026", compound:"SS-31 / MOTS-c", duration:"12:30", thumb:"⚡", ytId:"Arx8CD6TA0Y", level:"Intermediate", desc:"2026 sequential protocol based on new Gudiksen et al. study — repair with SS-31 first, then optimize with MOTS-c.", channel:"Peptide Education" },
-  { id:"glutathione-recon",  title:"How to Reconstitute Glutathione", compound:"Glutathione", duration:"7:10", thumb:"🌱", ytId:"Mk0fj3vGeSo", level:"Beginner",     desc:"What you need, what reconstituting glutathione looks like, and how to prepare your first dose correctly.", channel:"Peptide Education" },
-  { id:"semax-selank-inj",   title:"Intranasal vs Injection — Semax & Selank Methods Compared", compound:"Selank / Semax", duration:"13:20", thumb:"🧠", ytId:"G7FATd2CZaI", level:"Intermediate", desc:"Side-by-side comparison of intranasal and injectable Semax + Selank. Reconstitution, dosing math, syringe measurements, and method selection.", channel:"Peptide Education" },
-  { id:"dsip-guide",         title:"DSIP — How to Dose, Mix & Reconstitute for Research", compound:"DSIP", duration:"11:25", thumb:"🌙", ytId:"ywypMgDjWQ4", level:"Beginner",     desc:"Complete DSIP research guide: how to dose, mix, and reconstitute Delta Sleep Inducing Peptide.", channel:"Peptide Education" },
-  { id:"mt2-reconst",        title:"How to Use Melanotan 2 (MT2) — Reconstitution & Dosing", compound:"MT2", duration:"5:20", thumb:"🌛", ytId:"agZxQY5i0Ls", level:"Beginner",     desc:"MT2 reconstitution: 10mg vial with 2mL BAC water, dosing approaches, and injection overview.", channel:"Peptide Education" },
-  { id:"retrat-recon",       title:"Reconstitution Retatrutide — Properly Reconstitute GLP-1 Peptides", compound:"GLP-3 R (Retatrutide)", duration:"10:45", thumb:"🔥", ytId:"u2UZ6uVz6VI", level:"Beginner",     desc:"Education-first walkthrough: BAC water ratios, titration math, and storage for Retatrutide.", channel:"Pulse Collective" },
-];function VideoTutorialPage({go, user}:{go:Function; user:any}) {
+function VideoTutorialPage({go, user}:{go:Function; user:any}) {
   const [filter, setFilter] = useState("All");
   const [activeVideo, setActiveVideo] = useState<any>(null);
   const [search, setSearch] = useState("");
@@ -8104,7 +7685,6 @@ const VIDEO_TUTORIALS = [
         .vid-modal{animation:fadeUp .2s ease-out;}
       `}</style>
 
-      {/* Lightbox player */}
       {activeVideo && (
         <div onClick={()=>setActiveVideo(null)} style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.92)",backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
           <div className="vid-modal" onClick={e=>e.stopPropagation()} style={{width:"min(760px,96vw)",background:card,borderRadius:20,overflow:"hidden",boxShadow:"0 32px 80px rgba(0,0,0,0.9)",border:"1px solid rgba(255,255,255,0.1)"}}>
@@ -8113,11 +7693,13 @@ const VIDEO_TUTORIALS = [
                 style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",border:"none"}} allow="autoplay; fullscreen" allowFullScreen title={activeVideo.title}/>
             </div>
             <div style={{padding:"16px 20px",display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12}}>
-              <div>
+              <div style={{flex:1}}>
                 <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1rem",color:"#fff",marginBottom:4}}>{activeVideo.title}</div>
-                <div style={{fontSize:"0.8rem",color:muted,lineHeight:1.5}}>{activeVideo.desc}</div>
-                <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap"}}>
+                <div style={{fontSize:"0.8rem",color:muted,lineHeight:1.5,marginBottom:8}}>{activeVideo.desc}</div>
+                <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                   <span style={{background:"rgba(59,232,176,0.1)",color:accentG,fontSize:"0.65rem",fontWeight:700,padding:"2px 8px",borderRadius:100,border:"1px solid rgba(59,232,176,0.2)"}}>{activeVideo.compound}</span>
+                  {activeVideo.channel==="Dr. Jones DC"&&<span style={{background:"rgba(255,107,107,0.12)",color:"#ff8a80",fontSize:"0.63rem",fontWeight:700,padding:"2px 9px",borderRadius:100,border:"1px solid rgba(255,107,107,0.2)"}}>Dr. Jones DC ✓</span>}
+                  {activeVideo.channel==="Dr. Trevor Bachmeyer"&&<span style={{background:"rgba(79,142,247,0.12)",color:"#7fb3ff",fontSize:"0.63rem",fontWeight:700,padding:"2px 9px",borderRadius:100,border:"1px solid rgba(79,142,247,0.2)"}}>Dr. Bachmeyer ✓</span>}
                   <span style={{background:"rgba(255,255,255,0.06)",color:"rgba(255,255,255,0.5)",fontSize:"0.65rem",fontWeight:600,padding:"2px 8px",borderRadius:100}}>{activeVideo.level}</span>
                   <span style={{background:"rgba(255,255,255,0.06)",color:"rgba(255,255,255,0.5)",fontSize:"0.65rem",fontWeight:600,padding:"2px 8px",borderRadius:100}}>⏱ {activeVideo.duration}</span>
                 </div>
@@ -8128,22 +7710,24 @@ const VIDEO_TUTORIALS = [
         </div>
       )}
 
-      <div style={{maxWidth:900,margin:"0 auto",padding:"0 16px"}}>
-        {/* Header */}
+      <div style={{maxWidth:960,margin:"0 auto",padding:"0 16px"}}>
         <div style={{textAlign:"center",marginBottom:32,animation:"fadeUp .3s ease-out"}}>
           <div style={{display:"inline-flex",alignItems:"center",gap:8,background:"rgba(59,232,176,0.08)",border:"1px solid rgba(59,232,176,0.2)",borderRadius:100,padding:"5px 14px",marginBottom:14,fontSize:"0.75rem",fontWeight:700,color:accentG,letterSpacing:"0.06em"}}>▶ TUTORIAL LIBRARY</div>
           <h1 style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"clamp(1.8rem,4vw,2.4rem)",margin:"0 0 8px",lineHeight:1.1}}>Research Video Guides</h1>
-          <p style={{color:muted,fontSize:"0.9rem",margin:0,maxWidth:480,marginLeft:"auto",marginRight:"auto",lineHeight:1.6}}>Step-by-step video tutorials for researchers. From reconstitution to protocol design.</p>
+          <p style={{color:muted,fontSize:"0.9rem",margin:"0 0 8px",maxWidth:520,marginLeft:"auto",marginRight:"auto",lineHeight:1.6}}>Physician-curated video guides for peptide researchers. Featuring Dr. Jones DC and Dr. Trevor Bachmeyer.</p>
+          <div style={{display:"flex",justifyContent:"center",gap:10,flexWrap:"wrap"}}>
+            <span style={{background:"rgba(255,107,107,0.1)",color:"#ff8a80",fontSize:"0.7rem",fontWeight:700,padding:"3px 10px",borderRadius:100,border:"1px solid rgba(255,107,107,0.2)"}}>Dr. Jones DC ✓</span>
+            <span style={{background:"rgba(79,142,247,0.1)",color:"#7fb3ff",fontSize:"0.7rem",fontWeight:700,padding:"3px 10px",borderRadius:100,border:"1px solid rgba(79,142,247,0.2)"}}>Dr. Trevor Bachmeyer ✓</span>
+          </div>
         </div>
 
-        {/* Search + filter */}
         <div style={{display:"flex",gap:10,marginBottom:24,flexWrap:"wrap"}}>
           <div style={{flex:1,minWidth:200,position:"relative"}}>
             <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:muted,fontSize:"0.85rem"}}>🔍</span>
-            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search tutorials…"
+            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search tutorials or compounds…"
               style={{width:"100%",background:card,border:"1px solid "+border,borderRadius:12,padding:"10px 14px 10px 34px",color:"#fff",fontFamily:"inherit",fontSize:"0.88rem",outline:"none",boxSizing:"border-box"}}/>
           </div>
-          <div style={{display:"flex",gap:6}}>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
             {levels.map(l=>(
               <button key={l} onClick={()=>setFilter(l)}
                 style={{background:filter===l?"rgba(59,232,176,0.12)":card,border:"1px solid "+(filter===l?"rgba(59,232,176,0.3)":border),borderRadius:10,padding:"9px 14px",cursor:"pointer",fontSize:"0.78rem",fontWeight:700,color:filter===l?accentG:"rgba(255,255,255,0.6)",transition:"all .15s"}}>
@@ -8153,14 +7737,12 @@ const VIDEO_TUTORIALS = [
           </div>
         </div>
 
-        {/* Grid */}
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:16}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(270px,1fr))",gap:16}}>
           {filtered.map((v,i)=>(
             <div key={v.id} className="vid-card" onClick={()=>setActiveVideo(v)}
-              style={{background:card,border:"1px solid "+border,borderRadius:16,overflow:"hidden",cursor:"pointer",boxShadow:"0 4px 20px rgba(0,0,0,0.4)",animationDelay:`${i*0.05}s`}}>
-              {/* Thumbnail */}
+              style={{background:card,border:"1px solid "+border,borderRadius:16,overflow:"hidden",cursor:"pointer",boxShadow:"0 4px 20px rgba(0,0,0,0.4)",animationDelay:`${i*0.04}s`}}>
               <div style={{background:"linear-gradient(135deg,#0d1a14,#1a2d20)",aspectRatio:"16/9",display:"flex",alignItems:"center",justifyContent:"center",position:"relative",overflow:"hidden"}}>
-                <div style={{fontSize:"3.5rem",opacity:0.6}}>{v.thumb}</div>
+                <div style={{fontSize:"3rem",opacity:0.5}}>{v.thumb}</div>
                 <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
                   <div style={{width:52,height:52,borderRadius:"50%",background:"rgba(59,232,176,0.9)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 0 24px rgba(59,232,176,0.5)"}}>
                     <span style={{color:"#0e0e0e",fontSize:"1.3rem",marginLeft:3}}>▶</span>
@@ -8171,9 +7753,12 @@ const VIDEO_TUTORIALS = [
               </div>
               <div style={{padding:"12px 14px"}}>
                 <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"0.88rem",color:"#fff",marginBottom:4,lineHeight:1.3}}>{v.title}</div>
-                <div style={{fontSize:"0.73rem",color:muted,lineHeight:1.5,marginBottom:8}}>{v.desc}</div>
-                <span style={{background:"rgba(59,232,176,0.1)",color:accentG,fontSize:"0.63rem",fontWeight:700,padding:"2px 8px",borderRadius:100,border:"1px solid rgba(59,232,176,0.2)"}}>{v.compound}</span>
-                {v.channel==="Dr. Jones DC"&&<span style={{background:"rgba(255,107,107,0.12)",color:"#ff8a80",fontSize:"0.6rem",fontWeight:700,padding:"2px 8px",borderRadius:100,border:"1px solid rgba(255,107,107,0.2)"}}>Dr. Jones DC ✓</span>}
+                <div style={{fontSize:"0.72rem",color:muted,lineHeight:1.5,marginBottom:8}}>{v.desc}</div>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                  <span style={{background:"rgba(59,232,176,0.1)",color:accentG,fontSize:"0.63rem",fontWeight:700,padding:"2px 8px",borderRadius:100,border:"1px solid rgba(59,232,176,0.2)"}}>{v.compound}</span>
+                  {v.channel==="Dr. Jones DC"&&<span style={{background:"rgba(255,107,107,0.12)",color:"#ff8a80",fontSize:"0.6rem",fontWeight:700,padding:"2px 8px",borderRadius:100,border:"1px solid rgba(255,107,107,0.2)"}}>Dr. Jones DC ✓</span>}
+                  {v.channel==="Dr. Trevor Bachmeyer"&&<span style={{background:"rgba(79,142,247,0.12)",color:"#7fb3ff",fontSize:"0.6rem",fontWeight:700,padding:"2px 8px",borderRadius:100,border:"1px solid rgba(79,142,247,0.2)"}}>Dr. Bachmeyer ✓</span>}
+                </div>
               </div>
             </div>
           ))}
@@ -8914,7 +8499,7 @@ export default function App(){
     spg(p); if(id){spid(id); if(p==="category")setCatId(id);}
     setTimeout(()=>window.scrollTo(0,0),0);
     // Dynamic page title
-    const titles={home:"Alphaomegatides — Research Peptides",cart:"Cart — Alphaomegatides",quiz:"Find My Compound — Alphaomegatides",chat:"Community Chat — Alphaomegatides",xcommunity:"X Community — Alphaomegatides",videos:"Video Tutorials — Alphaomegatides",stacks:"Stack Builder — Alphaomegatides",wiki:"Research Wiki — Alphaomegatides",xcommunity:"X Community — Alphaomegatides",journal:"Research Journal — Alphaomegatides",dosing:"Dosing Calculator — Alphaomegatides",stack:"Stack Checker — Alphaomegatides",dashboard:"My Account — Alphaomegatides",login:"Sign In — Alphaomegatides",register:"Create Account — Alphaomegatides",coa:"COA Library — Alphaomegatides",blog:"Research Blog — Alphaomegatides",about:"About Us — Alphaomegatides"};
+    const titles={home:"Alphaomegatides — Research Peptides",cart:"Cart — Alphaomegatides",quiz:"Find My Compound — Alphaomegatides",chat:"Community Chat — Alphaomegatides",xcommunity:"X Community — Alphaomegatides",videos:"Video Tutorials — Alphaomegatides",stacks:"Stack Builder — Alphaomegatides",wiki:"Research Wiki — Alphaomegatides",journal:"Research Journal — Alphaomegatides",dosing:"Dosing Calculator — Alphaomegatides",stack:"Stack Checker — Alphaomegatides",dashboard:"My Account — Alphaomegatides",login:"Sign In — Alphaomegatides",register:"Create Account — Alphaomegatides",coa:"COA Library — Alphaomegatides",blog:"Research Blog — Alphaomegatides",about:"About Us — Alphaomegatides"};
     document.title=titles[p]||"Alphaomegatides";
   }
   function goBack(){
@@ -9044,6 +8629,6 @@ export default function App(){
         onMouseEnter={e=>e.currentTarget.style.background="rgba(59,232,176,0.2)"}
         onMouseLeave={e=>e.currentTarget.style.background="rgba(20,20,20,0.92)"}>↓</button>
     </div>
-  </div>;
-  </ErrorBoundary>
+  </div>
+  </ErrorBoundary>;
 }
