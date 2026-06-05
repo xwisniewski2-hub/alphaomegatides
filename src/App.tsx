@@ -987,7 +987,7 @@ function Nav({user,go,onLogout,cartCount}){
             :[{icon:"👤",label:"Sign In",action:()=>{go("login");close();}},
               {icon:"✨",label:"Create Account",action:()=>{go("register");close();}}]
           ),
-          {icon:"💬",label:"Community Chat",action:()=>{go("chat");close();}},{icon:"𝕏",label:"X Community",action:()=>{go("xcommunity");close();}},{icon:"▶",label:"Video Tutorials",action:()=>{go("videos");close();}},{icon:"⚗️",label:"Stack Builder",action:()=>{go("stacks");close();}},{icon:"📖",label:"Research Wiki",action:()=>{go("wiki");close();}},,{icon:"𝕏",label:"X Community",action:()=>{go("xcommunity");close();}},{icon:"🔬",label:"COA Library",action:()=>{go("coa");close();}},{icon:"📚",label:"Research Library",action:()=>{go("research");close();}},
+          {icon:"💬",label:"Community Chat",action:()=>{go("chat");close();}},{icon:"𝕏",label:"X Community",action:()=>{go("xcommunity");close();}},{icon:"▶",label:"Video Tutorials",action:()=>{go("videos");close();}},{icon:"⚗️",label:"Stack Builder",action:()=>{go("stacks");close();}},{icon:"📖",label:"Research Wiki",action:()=>{go("wiki");close();}},{icon:"🔬",label:"COA Library",action:()=>{go("coa");close();}},{icon:"📚",label:"Research Library",action:()=>{go("research");close();}},
           {icon:"⚖️",label:"Legal & Compliance",action:()=>{go("compliance");close();}},
           {icon:"🎯",label:"Find My Compound",action:()=>{go("quiz");close();}},
           {icon:"📦",label:"Track My Order",action:()=>{go("track");close();}},
@@ -4196,7 +4196,7 @@ function SiteFooter({go}){
         </div>
         <div>
           <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,color:"rgba(255,255,255,0.7)",fontSize:"0.8rem",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:14}}>Company</div>
-          {[["Contact",()=>go("contact")],["Community Chat",()=>go("chat")],["X Community",()=>go("xcommunity")],["Video Tutorials",()=>go("videos")],["Stack Builder",()=>go("stacks")],["Research Wiki",()=>go("wiki")],["X Community",()=>go("xcommunity")],["COA Library",()=>go("coa")],["Research Stacks",()=>go("bundles")],["Find My Compound",()=>go("quiz")],["Protocol Guides",()=>go("protocols")],["Track Order",()=>go("track")],["Sign In",()=>go("login")]].map(([l,fn])=>(
+          {[["Contact",()=>go("contact")],["Community Chat",()=>go("chat")],["X Community",()=>go("xcommunity")],["Video Tutorials",()=>go("videos")],["Stack Builder",()=>go("stacks")],["Research Wiki",()=>go("wiki")],["COA Library",()=>go("coa")],["Research Stacks",()=>go("bundles")],["Find My Compound",()=>go("quiz")],["Protocol Guides",()=>go("protocols")],["Track Order",()=>go("track")],["Sign In",()=>go("login")]].map(([l,fn])=>(
             <div key={l} onClick={fn} style={{cursor:"pointer",marginBottom:9,color:"rgba(255,255,255,0.4)",fontSize:"0.8rem",transition:"color .2s"}} onMouseEnter={e=>e.target.style.color="#fff"} onMouseLeave={e=>e.target.style.color="rgba(255,255,255,0.4)"}>{l}</div>
           ))}
         </div>
@@ -8848,7 +8848,6 @@ export default function App(){
     {pg==="videos"&&<VideoTutorialPage go={go} user={user}/>}
     {pg==="stacks"&&<StackBuilderPage go={go} user={user}/>}
     {pg==="wiki"&&<ResearchWikiPage go={go}/>}
-    {pg==="xcommunity"&&<XCommunityPage go={go} user={user}/>}
 
     <MobileBottomNav go={go} pg={pg} cartCount={cart.length} user={user}/>
     <PWABanner/>
