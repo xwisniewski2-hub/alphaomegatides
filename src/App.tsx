@@ -8318,6 +8318,204 @@ function AdminAnalyticsTab({user}:{user:any}) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// FLASH SALE — banner, admin panel, scheduler
+// ═══════════════════════════════════════════════════════════════
+const FLASH_KEY = "aot_flash_sale";
+
+interface FlashSale {
+  active: boolean;
+  message: string;
+  discount: string;
+  code: string;
+  endsAt: string;
+  color: string;
+}
+
+function getFlashSale(): FlashSale | null {
+  try {
+    const raw = localStorage.getItem(FLASH_KEY);
+    if (!raw) return null;
+    const d: FlashSale = JSON.parse(raw);
+    if (!d || !d.active) return null;
+    if (d.endsAt && d.endsAt !== "" && new Date(d.endsAt).getTime() < Date.now()) return null;
+    return d;
+  } catch { return null; }
+}
+
+function saveFlashSale(sale: FlashSale) {
+  try { localStorage.setItem(FLASH_KEY, JSON.stringify(sale)); } catch {}
+  try { localStorage.setItem("aot_flash_ping", String(Date.now())); } catch {}
+  try { window.dispatchEvent(new CustomEvent("aot_flash_update")); } catch {}
+}
+
+function FlashSaleBanner() {
+  const [sale, setSale] = useState<FlashSale|null>(null);
+  const [dismissed, setDismissed] = useState(false);
+  const [timeLeft, setTimeLeft] = useState("");
+
+  const load = () => {
+    setSale(getFlashSale());
+    try { if (!sessionStorage.getItem("aot_flash_dismissed")) setDismissed(false); } catch {}
+  };
+
+  const handleDismiss = () => {
+    setDismissed(true);
+    try { sessionStorage.setItem("aot_flash_dismissed", "1"); } catch {}
+  };
+
+  useEffect(() => {
+    load();
+    const iv = setInterval(load, 2000);
+    const onStore = (e: StorageEvent) => { if (e.key === "aot_flash_ping") load(); };
+    const onCustom = () => {
+      try { sessionStorage.removeItem("aot_flash_dismissed"); } catch {}
+      setDismissed(false);
+      load();
+    };
+    window.addEventListener("storage", onStore);
+    window.addEventListener("aot_flash_update", onCustom);
+    return () => {
+      clearInterval(iv);
+      window.removeEventListener("storage", onStore);
+      window.removeEventListener("aot_flash_update", onCustom);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!sale?.endsAt) return;
+    const iv = setInterval(() => {
+      const diff = new Date(sale.endsAt).getTime() - Date.now();
+      if (diff <= 0) { setTimeLeft(""); setSale(null); return; }
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      setTimeLeft(`${h}h ${m}m ${s}s`);
+    }, 1000);
+    return () => clearInterval(iv);
+  }, [sale?.endsAt]);
+
+  if (dismissed || !sale) return null;
+
+  const colors: Record<string,{bg:string;border:string;accent:string}> = {
+    red:   {bg:"linear-gradient(90deg,#7f0000,#c0392b,#7f0000)", border:"rgba(255,100,100,0.4)", accent:"#ffd6d6"},
+    green: {bg:"linear-gradient(90deg,#0a3d1f,#1a7a3a,#0a3d1f)", border:"rgba(59,232,176,0.4)",  accent:"#3be8b0"},
+    gold:  {bg:"linear-gradient(90deg,#5c3a00,#c07800,#5c3a00)", border:"rgba(255,209,102,0.4)", accent:"#ffd166"},
+    blue:  {bg:"linear-gradient(90deg,#0a1a4a,#1a3a8a,#0a1a4a)", border:"rgba(79,142,247,0.4)",  accent:"#4f8ef7"},
+  };
+  const col = colors[sale.color] || colors.red;
+
+  return (
+    <div style={{background:col.bg, borderBottom:`1px solid ${col.border}`,
+      padding:"9px 44px 9px 16px", display:"flex", alignItems:"center",
+      justifyContent:"center", gap:12, flexWrap:"wrap" as const,
+      position:"fixed" as const, top:0, left:0, right:0, zIndex:1000,
+      boxShadow:"0 2px 20px rgba(0,0,0,0.4)"}}>
+      <span style={{fontSize:"0.82rem", fontWeight:700, color:"#fff"}}>{sale.message}</span>
+      {sale.discount && (
+        <span style={{background:"rgba(255,255,255,0.2)", color:"#fff", fontWeight:800,
+          fontSize:"0.8rem", padding:"2px 10px", borderRadius:100, letterSpacing:"0.04em"}}>
+          {sale.discount} OFF
+        </span>
+      )}
+      {sale.code && (
+        <span style={{fontFamily:"monospace", background:"rgba(0,0,0,0.3)", color:col.accent,
+          fontWeight:800, fontSize:"0.8rem", padding:"3px 10px", borderRadius:8,
+          border:`1px solid ${col.accent}55`, letterSpacing:"0.06em"}}>
+          {sale.code}
+        </span>
+      )}
+      {timeLeft && (
+        <span style={{fontSize:"0.72rem", color:"rgba(255,255,255,0.8)", fontWeight:600}}>
+          ⏱ {timeLeft}
+        </span>
+      )}
+      <button onClick={handleDismiss}
+        style={{position:"absolute" as const, right:12, top:"50%", transform:"translateY(-50%)",
+          background:"rgba(255,255,255,0.15)", border:"none", color:"#fff",
+          borderRadius:"50%", width:24, height:24, cursor:"pointer",
+          fontSize:"0.75rem", display:"flex", alignItems:"center", justifyContent:"center"}}>✕</button>
+    </div>
+  );
+}
+
+function FlashSaleAdmin() {
+  const defaultSale: FlashSale = {active:false, message:"🔥 Flash Sale — Limited Time!", discount:"20%", code:"FLASH20", endsAt:"", color:"red"};
+  const [sale, setSaleState] = useState<FlashSale>(() => {
+    try { return JSON.parse(localStorage.getItem(FLASH_KEY)||"null") || defaultSale; } catch { return defaultSale; }
+  });
+  const [saved, setSaved] = useState(false);
+  const update = (k: keyof FlashSale, v: any) => setSaleState(p => ({...p, [k]:v}));
+
+  const handleSave = () => {
+    saveFlashSale(sale);
+    try { sessionStorage.removeItem("aot_flash_dismissed"); } catch {}
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  };
+
+  const accentG="#3be8b0", accentR="#ff6b6b", card="#161616", border="rgba(255,255,255,0.08)", muted="rgba(255,255,255,0.4)";
+
+  return (
+    <div style={{paddingTop:8}}>
+      <div style={{fontFamily:"'Syne',sans-serif",fontSize:"1rem",fontWeight:800,marginBottom:16}}>⚡ Flash Sale Settings</div>
+
+      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16,background:card,borderRadius:14,padding:"14px 16px",border:`1px solid ${sale.active?"rgba(59,232,176,0.3)":border}`}}>
+        <div style={{flex:1}}>
+          <div style={{fontWeight:700,fontSize:"0.88rem",color:"#fff",marginBottom:2}}>Sale Status</div>
+          <div style={{fontSize:"0.72rem",color:muted}}>{sale.active?"Banner is LIVE sitewide":"Banner is hidden"}</div>
+        </div>
+        <button onClick={()=>update("active",!sale.active)}
+          style={{background:sale.active?"rgba(59,232,176,0.15)":"rgba(255,255,255,0.07)",
+            border:`1px solid ${sale.active?"rgba(59,232,176,0.4)":border}`,
+            color:sale.active?accentG:"rgba(255,255,255,0.5)",
+            borderRadius:10,padding:"8px 18px",cursor:"pointer",fontFamily:"inherit",fontWeight:800,fontSize:"0.85rem",transition:"all .15s"}}>
+          {sale.active?"● LIVE":"○ OFF"}
+        </button>
+      </div>
+
+      <div style={{display:"flex",flexDirection:"column" as const,gap:10,marginBottom:16}}>
+        {[["message","Banner Message","🔥 Flash Sale — Limited Time!"],["discount","Discount Label","20%"],["code","Promo Code","FLASH20"]].map(([key,label,ph])=>(
+          <div key={key}>
+            <div style={{fontSize:"0.68rem",color:muted,fontWeight:600,marginBottom:4}}>{label}</div>
+            <input value={(sale as any)[key]} onChange={e=>update(key as keyof FlashSale, e.target.value)}
+              placeholder={ph}
+              style={{width:"100%",background:"rgba(255,255,255,0.04)",border:"1px solid "+border,borderRadius:10,
+                padding:"9px 13px",color:"#fff",fontFamily:"inherit",fontSize:"0.85rem",outline:"none",boxSizing:"border-box" as const}}/>
+          </div>
+        ))}
+        <div>
+          <div style={{fontSize:"0.68rem",color:muted,fontWeight:600,marginBottom:4}}>End Date/Time (optional)</div>
+          <input type="datetime-local" value={sale.endsAt} onChange={e=>update("endsAt",e.target.value)}
+            style={{width:"100%",background:"rgba(255,255,255,0.04)",border:"1px solid "+border,borderRadius:10,
+              padding:"9px 13px",color:"#fff",fontFamily:"inherit",fontSize:"0.85rem",outline:"none",boxSizing:"border-box" as const}}/>
+        </div>
+        <div>
+          <div style={{fontSize:"0.68rem",color:muted,fontWeight:600,marginBottom:8}}>Banner Color</div>
+          <div style={{display:"flex",gap:8}}>
+            {[["red","🔴"],["green","🟢"],["gold","🟡"],["blue","🔵"]].map(([c,emoji])=>(
+              <button key={c} onClick={()=>update("color",c)}
+                style={{flex:1,background:sale.color===c?"rgba(255,255,255,0.12)":"rgba(255,255,255,0.04)",
+                  border:`1px solid ${sale.color===c?"rgba(255,255,255,0.4)":border}`,
+                  borderRadius:10,padding:"8px 4px",cursor:"pointer",fontSize:"1rem",transition:"all .15s"}}>
+                {emoji}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <button onClick={handleSave}
+        style={{width:"100%",background:saved?"rgba(59,232,176,0.15)":accentG,
+          color:saved?"#3be8b0":"#0e0e0e",border:saved?"1px solid rgba(59,232,176,0.4)":"none",
+          borderRadius:12,padding:"12px",fontFamily:"inherit",fontWeight:800,fontSize:"0.9rem",
+          cursor:"pointer",transition:"all .2s",boxShadow:saved?"none":"0 4px 16px rgba(59,232,176,0.3)"}}>
+        {saved?"✓ Saved & Live!":"Save Flash Sale"}
+      </button>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
 // FLASH SALE SCHEDULER — set future start time, auto-activates
 // ═══════════════════════════════════════════════════════════════
 function FlashSaleScheduler() {
