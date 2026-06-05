@@ -987,7 +987,7 @@ function Nav({user,go,onLogout,cartCount}){
             :[{icon:"👤",label:"Sign In",action:()=>{go("login");close();}},
               {icon:"✨",label:"Create Account",action:()=>{go("register");close();}}]
           ),
-          {icon:"💬",label:"Community Chat",action:()=>{go("chat");close();}},{icon:"𝕏",label:"X Community",action:()=>{go("xcommunity");close();}},{icon:"▶",label:"Video Tutorials",action:()=>{go("videos");close();}},{icon:"⚗️",label:"Stack Builder",action:()=>{go("stacks");close();}},{icon:"📖",label:"Research Wiki",action:()=>{go("wiki");close();}},{icon:"🔬",label:"COA Library",action:()=>{go("coa");close();}},{icon:"📚",label:"Research Library",action:()=>{go("research");close();}},
+          {icon:"💬",label:"Community Chat",action:()=>{go("chat");close();}},{icon:"𝕏",label:"X Community",action:()=>{go("xcommunity");close();}},{icon:"👑",label:"Admin Panel",action:()=>{go("admin");close();}},{icon:"▶",label:"Video Tutorials",action:()=>{go("videos");close();}},{icon:"⚗️",label:"Stack Builder",action:()=>{go("stacks");close();}},{icon:"📖",label:"Research Wiki",action:()=>{go("wiki");close();}},{icon:"🔬",label:"COA Library",action:()=>{go("coa");close();}},{icon:"📚",label:"Research Library",action:()=>{go("research");close();}},
           {icon:"⚖️",label:"Legal & Compliance",action:()=>{go("compliance");close();}},
           {icon:"🎯",label:"Find My Compound",action:()=>{go("quiz");close();}},
           {icon:"📦",label:"Track My Order",action:()=>{go("track");close();}},
@@ -3684,7 +3684,7 @@ function Dashboard({user,go,onLogout,wishlistIds=[]}){
   }
   const sColor={shipped:C.b,delivered:C.g,processing:C.y};
   const tabs=isAdmin(user)
-    ? [["orders","📦 Orders"],["profile","👤 Profile"],["progress","📊 Progress"],["wishlist","❤️ Wishlist"],["coa","🔬 My COAs"],["telegram","✈️ Telegram"],["waitlist","📋 Waitlist"],["signups","👥 All Signups"],["flash","⚡ Flash Sale"],["analytics","📊 Analytics"]]
+    ? [["orders","📦 Orders"],["profile","👤 Profile"],["progress","📊 Progress"],["wishlist","❤️ Wishlist"],["coa","🔬 My COAs"],["telegram","✈️ Telegram"],["waitlist","📋 Waitlist"],["signups","👥 All Signups"],["flash","⚡ Flash Sale"],["analytics","📊 Analytics"],["admin","👑 CMS Panel"]]
     : [["orders","📦 Orders"],["profile","👤 Profile"],["progress","📊 Progress"],["wishlist","❤️ Wishlist"],["coa","🔬 My COAs"],["telegram","✈️ Telegram"]];
 
   return <div style={{paddingTop:70,background:"#0e0e0e",minHeight:"100vh"}}>
@@ -3957,6 +3957,7 @@ function Dashboard({user,go,onLogout,wishlistIds=[]}){
       {tab==="signups"&&isAdmin(user)&&<AllSignupsAdmin/>}
       {tab==="flash"&&isAdmin(user)&&<><FlashSaleAdmin/><FlashSaleScheduler/></>}
       {tab==="analytics"&&isAdmin(user)&&<AdminAnalyticsTab user={user}/>}
+      {tab==="admin"&&isAdmin(user)&&<div style={{padding:"8px 0"}}><AdminCMSPage user={user} go={go}/></div>}
       
       {tab==="telegram"&&<div style={{padding:"8px 0"}}><TelegramLinkCard user={user} go={go}/></div>}
       {tab==="coa"&&<div>
@@ -4196,7 +4197,7 @@ function SiteFooter({go}){
         </div>
         <div>
           <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,color:"rgba(255,255,255,0.7)",fontSize:"0.8rem",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:14}}>Company</div>
-          {[["Contact",()=>go("contact")],["Community Chat",()=>go("chat")],["X Community",()=>go("xcommunity")],["Video Tutorials",()=>go("videos")],["Stack Builder",()=>go("stacks")],["Research Wiki",()=>go("wiki")],["COA Library",()=>go("coa")],["Research Stacks",()=>go("bundles")],["Find My Compound",()=>go("quiz")],["Protocol Guides",()=>go("protocols")],["Track Order",()=>go("track")],["Sign In",()=>go("login")]].map(([l,fn])=>(
+          {[["Contact",()=>go("contact")],["Community Chat",()=>go("chat")],["X Community",()=>go("xcommunity")],["Admin Panel",()=>go("admin")],["Video Tutorials",()=>go("videos")],["Stack Builder",()=>go("stacks")],["Research Wiki",()=>go("wiki")],["COA Library",()=>go("coa")],["Research Stacks",()=>go("bundles")],["Find My Compound",()=>go("quiz")],["Protocol Guides",()=>go("protocols")],["Track Order",()=>go("track")],["Sign In",()=>go("login")]].map(([l,fn])=>(
             <div key={l} onClick={fn} style={{cursor:"pointer",marginBottom:9,color:"rgba(255,255,255,0.4)",fontSize:"0.8rem",transition:"color .2s"}} onMouseEnter={e=>e.target.style.color="#fff"} onMouseLeave={e=>e.target.style.color="rgba(255,255,255,0.4)"}>{l}</div>
           ))}
         </div>
@@ -8641,6 +8642,849 @@ function useStreamLive():boolean {
 }
 
 
+
+
+// ═══════════════════════════════════════════════════════════════
+// ADMIN CMS — Full site control panel
+// Products · Members · Inventory · Site Settings · Announcements
+// Stored in Firebase so changes persist across all devices/sessions
+// ═══════════════════════════════════════════════════════════════
+
+const FB_ADMIN_URL = "https://alphaomegatides-chat-default-rtdb.firebaseio.com";
+
+// ── CMS Product overrides (stored in Firebase, merge over hardcoded PRODUCTS) ──
+async function cmsGetProducts(): Promise<Record<string,any>> {
+  try {
+    const res = await fetch(`${FB_ADMIN_URL}/cms/products.json`);
+    if (!res.ok) return {};
+    return await res.json() || {};
+  } catch { return {}; }
+}
+
+async function cmsSaveProduct(id: string, data: any): Promise<void> {
+  try {
+    await fetch(`${FB_ADMIN_URL}/cms/products/${id}.json`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+  } catch(e) { console.error("CMS save failed:", e); }
+}
+
+async function cmsDeleteProduct(id: string): Promise<void> {
+  try {
+    await fetch(`${FB_ADMIN_URL}/cms/products/${id}.json`, { method: "DELETE" });
+  } catch {}
+}
+
+// ── CMS Announcements ──────────────────────────────────────────
+async function cmsGetAnnouncements(): Promise<any[]> {
+  try {
+    const res = await fetch(`${FB_ADMIN_URL}/cms/announcements.json`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!data) return [];
+    return Object.entries(data).map(([id,v]:any) => ({...v,id})).sort((a,b)=>b.createdAt-a.createdAt);
+  } catch { return []; }
+}
+
+async function cmsSaveAnnouncement(ann: any): Promise<void> {
+  try {
+    const method = ann.id ? "PATCH" : "POST";
+    const url = ann.id
+      ? `${FB_ADMIN_URL}/cms/announcements/${ann.id}.json`
+      : `${FB_ADMIN_URL}/cms/announcements.json`;
+    await fetch(url, {
+      method, headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({...ann, updatedAt: Date.now()}),
+    });
+  } catch {}
+}
+
+async function cmsDeleteAnnouncement(id: string): Promise<void> {
+  try { await fetch(`${FB_ADMIN_URL}/cms/announcements/${id}.json`, { method: "DELETE" }); } catch {}
+}
+
+// ── CMS Site Settings ──────────────────────────────────────────
+async function cmsGetSettings(): Promise<Record<string,any>> {
+  try {
+    const res = await fetch(`${FB_ADMIN_URL}/cms/settings.json`);
+    if (!res.ok) return {};
+    return await res.json() || {};
+  } catch { return {}; }
+}
+
+async function cmsSaveSettings(data: Record<string,any>): Promise<void> {
+  try {
+    await fetch(`${FB_ADMIN_URL}/cms/settings.json`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+  } catch {}
+}
+
+// ══════════════════════════════════════════════════════════════
+// ADMIN CMS PAGE — full control panel
+// ══════════════════════════════════════════════════════════════
+function AdminCMSPage({ user, go }: { user: any; go: Function }) {
+  const [section, setSection] = useState<"products"|"members"|"announcements"|"settings"|"orders">("products");
+
+  const accentG = "#3be8b0", accentR = "#ff6b6b", accentB = "#4f8ef7", accentY = "#ffd166";
+  const bg = "#0e0e0e", card = "#111111", card2 = "#161616", border = "rgba(255,255,255,0.08)", muted = "rgba(255,255,255,0.38)";
+
+  if (!user || !isAdmin(user)) return (
+    <div style={{minHeight:"100vh",background:bg,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:12}}>
+      <div style={{fontSize:"3rem"}}>🔒</div>
+      <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1.3rem"}}>Admin Only</div>
+      <button onClick={()=>go("login")} style={{background:accentG,color:"#0e0e0e",border:"none",borderRadius:100,padding:"10px 24px",fontFamily:"inherit",fontWeight:700,cursor:"pointer"}}>Sign In</button>
+    </div>
+  );
+
+  const NAV = [
+    { id:"products",      icon:"📦", label:"Products"      },
+    { id:"members",       icon:"👥", label:"Members"       },
+    { id:"announcements", icon:"📢", label:"Announcements" },
+    { id:"orders",        icon:"🧾", label:"Orders"        },
+    { id:"settings",      icon:"⚙️", label:"Site Settings" },
+  ];
+
+  return (
+    <div style={{background:bg,minHeight:"100vh",paddingTop:60}}>
+      <style>{`
+        @keyframes fadeUp{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+        .cms-row:hover{background:rgba(255,255,255,0.03)!important;}
+        .cms-btn:hover{filter:brightness(1.15);}
+        .cms-nav-btn:hover{background:rgba(255,255,255,0.07)!important;}
+      `}</style>
+
+      {/* Header */}
+      <div style={{background:"rgba(10,10,10,0.97)",backdropFilter:"blur(20px)",borderBottom:"1px solid "+border,padding:"14px 20px",display:"flex",alignItems:"center",gap:14,position:"sticky",top:60,zIndex:20}}>
+        <div style={{width:36,height:36,borderRadius:10,background:"rgba(255,107,107,0.15)",border:"1px solid rgba(255,107,107,0.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1rem",flexShrink:0}}>👑</div>
+        <div style={{flex:1}}>
+          <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1rem",color:"#fff"}}>Admin Control Panel</div>
+          <div style={{fontSize:"0.65rem",color:muted}}>alphaomegatides@yahoo.com · Full site management</div>
+        </div>
+        <button onClick={()=>go("home")} style={{background:"rgba(255,255,255,0.05)",border:"1px solid "+border,color:muted,borderRadius:9,padding:"6px 14px",cursor:"pointer",fontSize:"0.75rem",fontWeight:600}}>← Back to Site</button>
+      </div>
+
+      {/* Section nav */}
+      <div style={{background:"rgba(12,12,12,0.95)",borderBottom:"1px solid "+border,padding:"0 16px",display:"flex",gap:4,overflowX:"auto" as const}}>
+        {NAV.map(n=>(
+          <button key={n.id} className="cms-nav-btn" onClick={()=>setSection(n.id as any)}
+            style={{background:section===n.id?"rgba(59,232,176,0.1)":"transparent",border:"none",borderBottom:section===n.id?"2px solid "+accentG:"2px solid transparent",color:section===n.id?accentG:"rgba(255,255,255,0.55)",padding:"12px 16px",cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:"0.8rem",whiteSpace:"nowrap" as const,display:"flex",alignItems:"center",gap:6,transition:"all .15s"}}>
+            <span>{n.icon}</span>{n.label}
+          </button>
+        ))}
+      </div>
+
+      <div style={{maxWidth:1100,margin:"0 auto",padding:"20px 16px 100px"}}>
+        {section==="products"      && <CMSProducts      accentG={accentG} accentR={accentR} accentB={accentB} accentY={accentY} card={card} card2={card2} border={border} muted={muted}/>}
+        {section==="members"       && <CMSMembers        accentG={accentG} accentR={accentR} accentY={accentY} card={card} card2={card2} border={border} muted={muted} currentUser={user}/>}
+        {section==="announcements" && <CMSAnnouncements  accentG={accentG} accentR={accentR} card={card} card2={card2} border={border} muted={muted}/>}
+        {section==="orders"        && <CMSOrders         accentG={accentG} accentB={accentB} accentY={accentY} card={card} border={border} muted={muted}/>}
+        {section==="settings"      && <CMSSiteSettings   accentG={accentG} accentR={accentR} accentB={accentB} card={card} card2={card2} border={border} muted={muted} go={go}/>}
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// SECTION: PRODUCT MANAGER
+// ══════════════════════════════════════════════════════════════
+function CMSProducts({accentG,accentR,accentB,accentY,card,card2,border,muted}:any) {
+  const [overrides, setOverrides]   = useState<Record<string,any>>({});
+  const [loading, setLoading]       = useState(true);
+  const [editing, setEditing]       = useState<string|null>(null);
+  const [draft, setDraft]           = useState<any>({});
+  const [saving, setSaving]         = useState(false);
+  const [saved, setSaved]           = useState<string|null>(null);
+  const [search, setSearch]         = useState("");
+  const [showNew, setShowNew]       = useState(false);
+  const [newProduct, setNewProduct] = useState({name:"",price:"",size:"",desc:"",icon:"🧬",color:"#3be8b0",inStock:true,tag:"",category:""});
+
+  useEffect(()=>{ cmsGetProducts().then(d=>{ setOverrides(d||{}); setLoading(false); }); },[]);
+
+  // Merge hardcoded PRODUCTS with Firebase overrides
+  const merged = PRODUCTS.map(p => ({ ...p, ...(overrides[p.id]||{}), _override: !!overrides[p.id] }));
+  const allProducts = [
+    ...merged,
+    ...Object.entries(overrides).filter(([id])=>!PRODUCTS.find(p=>p.id===id)).map(([id,v]:any)=>({...v,id,_custom:true}))
+  ].filter(p => !search || p.name?.toLowerCase().includes(search.toLowerCase()));
+
+  const handleEdit = (p: any) => {
+    setEditing(p.id);
+    setDraft({
+      name: p.name||"",
+      price: p.price||p.sizes?.[0]?.p||"",
+      size: p.size||p.sizes?.[0]?.s||"",
+      desc: p.desc||"",
+      icon: p.icon||"🧬",
+      color: p.color||"#3be8b0",
+      tag: p.tag||"",
+      inStock: overrides[p.id]?.inStock !== false,
+      oos: overrides[p.id]?.oos||false,
+      note: overrides[p.id]?.note||"",
+    });
+  };
+
+  const handleSave = async () => {
+    if (!editing) return;
+    setSaving(true);
+    await cmsSaveProduct(editing, { ...draft, updatedAt: Date.now() });
+    const updated = await cmsGetProducts();
+    setOverrides(updated||{});
+    setSaving(false); setSaved(editing); setEditing(null);
+    setTimeout(()=>setSaved(null),2000);
+  };
+
+  const handleToggleStock = async (id: string, current: boolean) => {
+    await cmsSaveProduct(id, { inStock: !current, oos: current, updatedAt: Date.now() });
+    const updated = await cmsGetProducts();
+    setOverrides(updated||{});
+  };
+
+  const handleAddNew = async () => {
+    if (!newProduct.name) return;
+    const id = newProduct.name.toLowerCase().replace(/[^a-z0-9]/g,"_") + "_" + Date.now();
+    await cmsSaveProduct(id, { ...newProduct, id, createdAt: Date.now(), _custom: true });
+    const updated = await cmsGetProducts();
+    setOverrides(updated||{});
+    setNewProduct({name:"",price:"",size:"",desc:"",icon:"🧬",color:"#3be8b0",inStock:true,tag:"",category:""});
+    setShowNew(false);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm(`Delete product "${id}"? This cannot be undone.`)) return;
+    await cmsDeleteProduct(id);
+    const updated = await cmsGetProducts();
+    setOverrides(updated||{});
+  };
+
+  const inStock = (p:any) => overrides[p.id]?.inStock !== false && !overrides[p.id]?.oos;
+
+  return (
+    <div style={{animation:"fadeUp .25s ease-out"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap" as const,gap:12,marginBottom:20}}>
+        <div>
+          <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1.2rem",color:"#fff"}}>📦 Product Manager</div>
+          <div style={{fontSize:"0.72rem",color:muted,marginTop:2}}>{allProducts.length} products · changes save to Firebase instantly</div>
+        </div>
+        <button onClick={()=>setShowNew(!showNew)} className="cms-btn"
+          style={{background:accentG,color:"#0e0e0e",border:"none",borderRadius:10,padding:"10px 18px",fontFamily:"inherit",fontWeight:800,fontSize:"0.85rem",cursor:"pointer",display:"flex",alignItems:"center",gap:7}}>
+          + Add New Product
+        </button>
+      </div>
+
+      {/* Add new product form */}
+      {showNew && (
+        <div style={{background:card,border:"1px solid rgba(59,232,176,0.2)",borderRadius:16,padding:20,marginBottom:20}}>
+          <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"0.9rem",marginBottom:14,color:accentG}}>+ New Product</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:10,marginBottom:14}}>
+            {[["name","Product Name","BPC-157"],["price","Price","$89.99"],["size","Size","10mg"],["tag","Category Tag","Peptide"],["icon","Emoji Icon","🧬"]].map(([k,label,ph])=>(
+              <div key={k}>
+                <div style={{fontSize:"0.65rem",color:muted,marginBottom:4,fontWeight:600}}>{label}</div>
+                <input value={(newProduct as any)[k]} onChange={e=>setNewProduct(p=>({...p,[k]:e.target.value}))} placeholder={ph}
+                  style={{width:"100%",background:card2,border:"1px solid "+border,borderRadius:9,padding:"8px 12px",color:"#fff",fontFamily:"inherit",fontSize:"0.85rem",outline:"none",boxSizing:"border-box" as const}}/>
+              </div>
+            ))}
+          </div>
+          <div style={{marginBottom:14}}>
+            <div style={{fontSize:"0.65rem",color:muted,marginBottom:4,fontWeight:600}}>Description</div>
+            <textarea value={newProduct.desc} onChange={e=>setNewProduct(p=>({...p,desc:e.target.value}))} placeholder="Product description for the product page…" rows={3}
+              style={{width:"100%",background:card2,border:"1px solid "+border,borderRadius:9,padding:"8px 12px",color:"#fff",fontFamily:"inherit",fontSize:"0.85rem",outline:"none",resize:"none" as const,boxSizing:"border-box" as const}}/>
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={handleAddNew} style={{background:accentG,color:"#0e0e0e",border:"none",borderRadius:9,padding:"9px 18px",fontFamily:"inherit",fontWeight:800,fontSize:"0.85rem",cursor:"pointer"}}>Save Product</button>
+            <button onClick={()=>setShowNew(false)} style={{background:"rgba(255,255,255,0.06)",border:"1px solid "+border,color:muted,borderRadius:9,padding:"9px 14px",fontFamily:"inherit",fontWeight:600,fontSize:"0.82rem",cursor:"pointer"}}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* Search */}
+      <div style={{position:"relative" as const,marginBottom:16}}>
+        <span style={{position:"absolute" as const,left:12,top:"50%",transform:"translateY(-50%)",color:muted,fontSize:"0.85rem"}}>🔍</span>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search products…"
+          style={{width:"100%",background:card,border:"1px solid "+border,borderRadius:12,padding:"10px 14px 10px 34px",color:"#fff",fontFamily:"inherit",fontSize:"0.88rem",outline:"none",boxSizing:"border-box" as const}}/>
+      </div>
+
+      {/* Product list */}
+      {loading ? <div style={{textAlign:"center",padding:40,color:muted}}>Loading…</div> : (
+        <div style={{display:"flex",flexDirection:"column" as const,gap:8}}>
+          {allProducts.map(p=>(
+            <div key={p.id} className="cms-row"
+              style={{background:card,border:`1px solid ${saved===p.id?"rgba(59,232,176,0.3)":inStock(p)?"rgba(255,255,255,0.06)":"rgba(255,107,107,0.15)"}`,borderRadius:14,padding:"14px 16px",transition:"all .15s"}}>
+
+              {editing === p.id ? (
+                /* Edit form */
+                <div>
+                  <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"0.85rem",color:accentG,marginBottom:12}}>Editing: {p.name}</div>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:10,marginBottom:12}}>
+                    {[["name","Name"],["price","Price"],["size","Size"],["tag","Tag"],["icon","Icon"]].map(([k,label])=>(
+                      <div key={k}>
+                        <div style={{fontSize:"0.62rem",color:muted,marginBottom:3,fontWeight:600}}>{label}</div>
+                        <input value={draft[k]||""} onChange={e=>setDraft((d:any)=>({...d,[k]:e.target.value}))}
+                          style={{width:"100%",background:card2,border:"1px solid "+border,borderRadius:8,padding:"7px 10px",color:"#fff",fontFamily:"inherit",fontSize:"0.83rem",outline:"none",boxSizing:"border-box" as const}}/>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{marginBottom:10}}>
+                    <div style={{fontSize:"0.62rem",color:muted,marginBottom:3,fontWeight:600}}>Description</div>
+                    <textarea value={draft.desc||""} onChange={e=>setDraft((d:any)=>({...d,desc:e.target.value}))} rows={3}
+                      style={{width:"100%",background:card2,border:"1px solid "+border,borderRadius:8,padding:"7px 10px",color:"#fff",fontFamily:"inherit",fontSize:"0.83rem",outline:"none",resize:"none" as const,boxSizing:"border-box" as const}}/>
+                  </div>
+                  <div style={{marginBottom:12}}>
+                    <div style={{fontSize:"0.62rem",color:muted,marginBottom:3,fontWeight:600}}>Admin Notes (internal only)</div>
+                    <input value={draft.note||""} onChange={e=>setDraft((d:any)=>({...d,note:e.target.value}))} placeholder="Internal notes…"
+                      style={{width:"100%",background:card2,border:"1px solid "+border,borderRadius:8,padding:"7px 10px",color:"#fff",fontFamily:"inherit",fontSize:"0.83rem",outline:"none",boxSizing:"border-box" as const}}/>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap" as const}}>
+                    <button onClick={()=>setDraft((d:any)=>({...d,inStock:!d.inStock,oos:d.inStock}))}
+                      style={{background:draft.inStock?"rgba(59,232,176,0.1)":"rgba(255,107,107,0.1)",border:`1px solid ${draft.inStock?"rgba(59,232,176,0.3)":"rgba(255,107,107,0.3)"}`,color:draft.inStock?accentG:accentR,borderRadius:8,padding:"7px 14px",cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:"0.78rem"}}>
+                      {draft.inStock?"✓ In Stock":"✗ Out of Stock"}
+                    </button>
+                    <button onClick={handleSave} disabled={saving}
+                      style={{background:accentG,color:"#0e0e0e",border:"none",borderRadius:8,padding:"7px 18px",fontFamily:"inherit",fontWeight:800,fontSize:"0.82rem",cursor:"pointer"}}>
+                      {saving?"Saving…":"💾 Save Changes"}
+                    </button>
+                    <button onClick={()=>setEditing(null)}
+                      style={{background:"rgba(255,255,255,0.05)",border:"1px solid "+border,color:muted,borderRadius:8,padding:"7px 12px",cursor:"pointer",fontFamily:"inherit",fontWeight:600,fontSize:"0.78rem"}}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Product row */
+                <div style={{display:"flex",alignItems:"center",gap:12}}>
+                  <div style={{fontSize:"1.4rem",flexShrink:0}}>{p.icon||"🧬"}</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3,flexWrap:"wrap" as const}}>
+                      <span style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"0.9rem",color:"#fff"}}>{p.name}</span>
+                      {p._custom && <span style={{background:"rgba(168,85,247,0.15)",color:"#a855f7",fontSize:"0.58rem",fontWeight:700,padding:"1px 7px",borderRadius:100}}>CUSTOM</span>}
+                      {p._override && !p._custom && <span style={{background:"rgba(255,209,102,0.12)",color:accentY,fontSize:"0.58rem",fontWeight:700,padding:"1px 7px",borderRadius:100}}>MODIFIED</span>}
+                      {saved===p.id && <span style={{background:"rgba(59,232,176,0.12)",color:accentG,fontSize:"0.58rem",fontWeight:700,padding:"1px 7px",borderRadius:100}}>✓ SAVED</span>}
+                    </div>
+                    <div style={{display:"flex",gap:8,flexWrap:"wrap" as const}}>
+                      <span style={{fontSize:"0.72rem",fontWeight:700,color:accentG}}>{overrides[p.id]?.price||p.price||p.sizes?.[0]?.p||"—"}</span>
+                      <span style={{fontSize:"0.72rem",color:muted}}>{overrides[p.id]?.size||p.size||p.sizes?.[0]?.s||"—"}</span>
+                      {p.tag && <span style={{fontSize:"0.68rem",color:muted,background:"rgba(255,255,255,0.05)",padding:"1px 8px",borderRadius:100}}>{p.tag}</span>}
+                    </div>
+                  </div>
+
+                  {/* Stock toggle */}
+                  <button onClick={()=>handleToggleStock(p.id, inStock(p))} className="cms-btn"
+                    style={{background:inStock(p)?"rgba(59,232,176,0.1)":"rgba(255,107,107,0.1)",border:`1px solid ${inStock(p)?"rgba(59,232,176,0.25)":"rgba(255,107,107,0.25)"}`,color:inStock(p)?accentG:accentR,borderRadius:8,padding:"6px 12px",cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:"0.72rem",flexShrink:0,transition:"all .15s"}}>
+                    {inStock(p)?"✓ In Stock":"✗ OOS"}
+                  </button>
+
+                  {/* Edit */}
+                  <button onClick={()=>handleEdit(p)} className="cms-btn"
+                    style={{background:"rgba(79,142,247,0.1)",border:"1px solid rgba(79,142,247,0.2)",color:accentB,borderRadius:8,padding:"6px 12px",cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:"0.72rem",flexShrink:0}}>
+                    ✏️ Edit
+                  </button>
+
+                  {/* Delete (custom only) */}
+                  {p._custom && (
+                    <button onClick={()=>handleDelete(p.id)} className="cms-btn"
+                      style={{background:"rgba(255,107,107,0.08)",border:"1px solid rgba(255,107,107,0.18)",color:accentR,borderRadius:8,padding:"6px 10px",cursor:"pointer",fontSize:"0.72rem",flexShrink:0}}>
+                      🗑
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// SECTION: MEMBER MANAGER
+// ══════════════════════════════════════════════════════════════
+function CMSMembers({accentG,accentR,accentY,accentB,card,card2,border,muted,currentUser}:any) {
+  const [members, setMembers]     = useState<any[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [search, setSearch]       = useState("");
+  const [filter, setFilter]       = useState<"all"|"active"|"muted"|"banned">("all");
+  const [saving, setSaving]       = useState<string|null>(null);
+  const [online, setOnline]       = useState<string[]>([]);
+  const [showAdd, setShowAdd]     = useState(false);
+  const [newMember, setNewMember] = useState({email:"",name:"",password:""});
+  const [addMsg, setAddMsg]       = useState("");
+
+  const load = async () => {
+    // Get local registered users
+    const localUsers = Object.values(getUsers()) as any[];
+    // Get Firebase chat members (have status/mute/ban info)
+    const fbRes = await fetch(`${FB_ADMIN_URL}/chat/members.json`).catch(()=>null);
+    const fbMembers = fbRes?.ok ? await fbRes.json() : {};
+    // Merge: local users as base, overlay Firebase status
+    const merged = localUsers.map((u:any) => {
+      const key = u.email?.replace(/[.@]/g,"_");
+      const fb = fbMembers?.[key] || {};
+      return { ...u, status: fb.status||"active", messageCount: fb.messageCount||0, lastSeen: fb.lastSeen||u.createdAt||0 };
+    });
+    // Add Firebase-only members (chat users not in local)
+    if (fbMembers) {
+      Object.values(fbMembers).forEach((fb:any) => {
+        if (!merged.find((m:any)=>m.email===fb.email)) {
+          merged.push({ email:fb.email, name:fb.userName||fb.email, status:fb.status||"active", messageCount:fb.messageCount||0, lastSeen:fb.lastSeen||0, _fbOnly:true });
+        }
+      });
+    }
+    setMembers(merged.sort((a:any,b:any)=>(b.lastSeen||0)-(a.lastSeen||0)));
+    // Online
+    const onRes = await fetch(`${FB_ADMIN_URL}/chat/online.json`).catch(()=>null);
+    const onData = onRes?.ok ? await onRes.json() : {};
+    const cutoff = Date.now()-90000;
+    setOnline(Object.values(onData||{}).filter((u:any)=>u.ts>cutoff).map((u:any)=>u.name));
+    setLoading(false);
+  };
+
+  useEffect(()=>{ load(); const iv=setInterval(load,10000); return()=>clearInterval(iv); },[]);
+
+  const handleStatus = async (member:any, status:"active"|"muted"|"banned") => {
+    if (member.email===currentUser?.email) { alert("Cannot change your own status."); return; }
+    setSaving(member.email);
+    await fetch(`${FB_ADMIN_URL}/chat/members/${member.email.replace(/[.@]/g,"_")}.json`, {
+      method:"PATCH", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({status, email:member.email, userName:member.name||member.fname||member.email})
+    });
+    await load(); setSaving(null);
+  };
+
+  const handleDeleteMember = async (member:any) => {
+    if (!window.confirm(`Delete account for ${member.email}? This removes them from the site.`)) return;
+    // Remove from localStorage users
+    const users = getUsers();
+    const key = Object.keys(users).find(k=>(users[k] as any).email===member.email);
+    if (key) { delete users[key]; saveUsers(users); }
+    await load();
+  };
+
+  const handleAddMember = async () => {
+    if (!newMember.email||!newMember.password) { setAddMsg("Email and password required."); return; }
+    const users = getUsers();
+    if (Object.values(users).find((u:any)=>u.email===newMember.email)) { setAddMsg("Email already registered."); return; }
+    const id = "u_"+Date.now();
+    (users as any)[id] = { email:newMember.email, name:newMember.name||newMember.email.split("@")[0], fname:newMember.name||"Member", pass:btoa(newMember.password), role:"member", createdAt:new Date().toISOString() };
+    saveUsers(users);
+    setAddMsg("✓ Member added successfully!");
+    setNewMember({email:"",name:"",password:""});
+    setTimeout(()=>setAddMsg(""),3000);
+    await load();
+  };
+
+  const filtered = members.filter(m => {
+    if (filter!=="all" && m.status!==filter) return false;
+    if (search && !m.email?.toLowerCase().includes(search.toLowerCase()) && !m.name?.toLowerCase().includes(search.toLowerCase()) && !m.fname?.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+
+  const counts = { all:members.length, active:members.filter(m=>m.status==="active").length, muted:members.filter(m=>m.status==="muted").length, banned:members.filter(m=>m.status==="banned").length };
+  const statusColor = (s:string) => s==="banned"?accentR:s==="muted"?accentY:accentG;
+  const timeAgo = (ts:any) => { if(!ts) return "never"; const d=Date.now()-new Date(ts).getTime(); const m=Math.floor(d/60000),h=Math.floor(d/3600000),dy=Math.floor(d/86400000); if(d<60000)return"just now";if(m<60)return`${m}m ago`;if(h<24)return`${h}h ago`;return`${dy}d ago`; };
+
+  return (
+    <div style={{animation:"fadeUp .25s ease-out"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap" as const,gap:12,marginBottom:20}}>
+        <div>
+          <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1.2rem",color:"#fff"}}>👥 Member Manager</div>
+          <div style={{fontSize:"0.72rem",color:muted,marginTop:2}}>{members.length} total · {online.length} online now</div>
+        </div>
+        <button onClick={()=>setShowAdd(!showAdd)}
+          style={{background:accentG,color:"#0e0e0e",border:"none",borderRadius:10,padding:"10px 18px",fontFamily:"inherit",fontWeight:800,fontSize:"0.85rem",cursor:"pointer"}}>
+          + Add Member
+        </button>
+      </div>
+
+      {/* Add member form */}
+      {showAdd && (
+        <div style={{background:card,border:"1px solid rgba(59,232,176,0.2)",borderRadius:16,padding:18,marginBottom:16}}>
+          <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"0.9rem",marginBottom:12,color:accentG}}>+ Create New Member Account</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:10,marginBottom:12}}>
+            {[["email","Email Address","member@email.com"],["name","Display Name","John Doe"],["password","Password","••••••••"]].map(([k,label,ph])=>(
+              <div key={k}>
+                <div style={{fontSize:"0.62rem",color:muted,marginBottom:3,fontWeight:600}}>{label}</div>
+                <input type={k==="password"?"password":"text"} value={(newMember as any)[k]} onChange={e=>setNewMember(p=>({...p,[k]:e.target.value}))} placeholder={ph}
+                  style={{width:"100%",background:card2,border:"1px solid "+border,borderRadius:8,padding:"8px 12px",color:"#fff",fontFamily:"inherit",fontSize:"0.85rem",outline:"none",boxSizing:"border-box" as const}}/>
+              </div>
+            ))}
+          </div>
+          {addMsg && <div style={{fontSize:"0.78rem",color:addMsg.startsWith("✓")?accentG:accentR,marginBottom:10}}>{addMsg}</div>}
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={handleAddMember} style={{background:accentG,color:"#0e0e0e",border:"none",borderRadius:8,padding:"8px 18px",fontFamily:"inherit",fontWeight:800,fontSize:"0.82rem",cursor:"pointer"}}>Create Account</button>
+            <button onClick={()=>setShowAdd(false)} style={{background:"rgba(255,255,255,0.05)",border:"1px solid "+border,color:muted,borderRadius:8,padding:"8px 12px",cursor:"pointer",fontFamily:"inherit",fontSize:"0.82rem"}}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* Stats + filter */}
+      <div style={{display:"flex",gap:0,background:card,borderRadius:12,overflow:"hidden",border:"1px solid "+border,marginBottom:12}}>
+        {(["all","active","muted","banned"] as const).map(f=>(
+          <button key={f} onClick={()=>setFilter(f)}
+            style={{flex:1,padding:"10px 4px",background:filter===f?"rgba(59,232,176,0.08)":"transparent",border:"none",borderBottom:`2px solid ${filter===f?accentG:"transparent"}`,cursor:"pointer",transition:"all .15s"}}>
+            <div style={{fontSize:"1rem"}}>{f==="all"?"👥":f==="active"?"✅":f==="muted"?"🔇":"🚫"}</div>
+            <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"0.9rem",color:f==="all"?"#fff":statusColor(f)}}>{counts[f]}</div>
+            <div style={{fontSize:"0.6rem",color:muted,textTransform:"capitalize" as const}}>{f}</div>
+          </button>
+        ))}
+      </div>
+
+      {/* Search */}
+      <div style={{position:"relative" as const,marginBottom:14}}>
+        <span style={{position:"absolute" as const,left:12,top:"50%",transform:"translateY(-50%)",color:muted}}>🔍</span>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search by email or name…"
+          style={{width:"100%",background:card,border:"1px solid "+border,borderRadius:10,padding:"9px 14px 9px 34px",color:"#fff",fontFamily:"inherit",fontSize:"0.85rem",outline:"none",boxSizing:"border-box" as const}}/>
+      </div>
+
+      {/* Member rows */}
+      {loading ? <div style={{textAlign:"center",padding:40,color:muted}}>Loading members…</div> : (
+        <div style={{display:"flex",flexDirection:"column" as const,gap:6}}>
+          {filtered.map(m=>{
+            const name = m.fname||m.name||m.email?.split("@")[0]||"Member";
+            const isOnline = online.includes(name);
+            const isSelf = m.email===currentUser?.email;
+            return (
+              <div key={m.email} className="cms-row"
+                style={{display:"flex",alignItems:"center",gap:12,background:card,border:"1px solid "+border,borderRadius:12,padding:"12px 16px",transition:"background .12s"}}>
+                {/* Avatar */}
+                <div style={{position:"relative" as const,flexShrink:0}}>
+                  <div style={{width:36,height:36,borderRadius:"50%",background:m.status==="banned"?"#1a0a0a":"rgba(59,232,176,0.2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"0.75rem",fontWeight:800,color:m.status==="banned"?"rgba(255,255,255,0.2)":accentG}}>
+                    {m.status==="banned"?"🚫":name.slice(0,2).toUpperCase()}
+                  </div>
+                  {isOnline&&<span style={{position:"absolute" as const,bottom:0,right:0,width:9,height:9,borderRadius:"50%",background:accentG,border:"2px solid #111"}}/>}
+                </div>
+                {/* Info */}
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap" as const,marginBottom:2}}>
+                    <span style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"0.85rem",color:"#fff"}}>{name}</span>
+                    {isSelf&&<span style={{background:"rgba(59,232,176,0.12)",color:accentG,fontSize:"0.58rem",fontWeight:700,padding:"1px 6px",borderRadius:100}}>YOU</span>}
+                    {isOnline&&<span style={{fontSize:"0.58rem",color:accentG,fontWeight:600}}>● LIVE</span>}
+                    <span style={{background:m.status==="banned"?"rgba(255,107,107,0.12)":m.status==="muted"?"rgba(255,209,102,0.12)":"rgba(59,232,176,0.08)",color:statusColor(m.status||"active"),fontSize:"0.58rem",fontWeight:700,padding:"1px 7px",borderRadius:100}}>
+                      {(m.status||"active").toUpperCase()}
+                    </span>
+                  </div>
+                  <div style={{fontSize:"0.66rem",color:muted,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>
+                    {m.email} · {m.messageCount||0} msgs · joined {timeAgo(m.createdAt||m.lastSeen)}
+                  </div>
+                </div>
+                {/* Actions */}
+                {!isSelf && (
+                  <div style={{display:"flex",gap:5,flexShrink:0,flexWrap:"wrap" as const}}>
+                    {m.status!=="active"&&<button disabled={saving===m.email} onClick={()=>handleStatus(m,"active")} className="cms-btn" style={{background:"rgba(59,232,176,0.1)",border:"1px solid rgba(59,232,176,0.25)",color:accentG,borderRadius:7,padding:"5px 10px",cursor:"pointer",fontSize:"0.7rem",fontWeight:700}}>✅ Allow</button>}
+                    {m.status!=="muted"&&<button disabled={saving===m.email} onClick={()=>handleStatus(m,"muted")} className="cms-btn" style={{background:"rgba(255,209,102,0.08)",border:"1px solid rgba(255,209,102,0.2)",color:accentY,borderRadius:7,padding:"5px 10px",cursor:"pointer",fontSize:"0.7rem",fontWeight:700}}>🔇 Mute</button>}
+                    {m.status!=="banned"&&<button disabled={saving===m.email} onClick={()=>{if(window.confirm(`Ban ${name}?`))handleStatus(m,"banned");}} className="cms-btn" style={{background:"rgba(255,107,107,0.08)",border:"1px solid rgba(255,107,107,0.18)",color:accentR,borderRadius:7,padding:"5px 10px",cursor:"pointer",fontSize:"0.7rem",fontWeight:700}}>🚫 Ban</button>}
+                    {!m._fbOnly&&<button onClick={()=>handleDeleteMember(m)} className="cms-btn" style={{background:"rgba(255,107,107,0.06)",border:"1px solid rgba(255,107,107,0.12)",color:"rgba(255,107,107,0.5)",borderRadius:7,padding:"5px 8px",cursor:"pointer",fontSize:"0.7rem"}}>🗑</button>}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {filtered.length===0&&<div style={{textAlign:"center",padding:40,color:muted}}>No members found.</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// SECTION: ANNOUNCEMENTS / BANNERS
+// ══════════════════════════════════════════════════════════════
+function CMSAnnouncements({accentG,accentR,card,card2,border,muted}:any) {
+  const [anns, setAnns]     = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [draft, setDraft]   = useState({title:"",body:"",type:"info",active:true,pinned:false});
+  const [saving, setSaving] = useState(false);
+
+  const load = async () => { const a=await cmsGetAnnouncements(); setAnns(a); setLoading(false); };
+  useEffect(()=>{ load(); },[]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    await cmsSaveAnnouncement({...draft, createdAt:Date.now()});
+    await load(); setSaving(false); setShowForm(false);
+    setDraft({title:"",body:"",type:"info",active:true,pinned:false});
+  };
+  const handleDelete = async (id:string) => { if(!window.confirm("Delete?"))return; await cmsDeleteAnnouncement(id); await load(); };
+  const handleToggle = async (ann:any) => { await cmsSaveAnnouncement({...ann,active:!ann.active}); await load(); };
+
+  const typeColor = (t:string) => t==="warning"?"rgba(255,209,102,0.8)":t==="error"?"rgba(255,107,107,0.8)":t==="success"?"rgba(59,232,176,0.8)":"rgba(79,142,247,0.8)";
+
+  return (
+    <div style={{animation:"fadeUp .25s ease-out"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
+        <div>
+          <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1.2rem",color:"#fff"}}>📢 Announcements</div>
+          <div style={{fontSize:"0.72rem",color:muted,marginTop:2}}>Site-wide notices, alerts, and pinned messages</div>
+        </div>
+        <button onClick={()=>setShowForm(!showForm)}
+          style={{background:accentG,color:"#0e0e0e",border:"none",borderRadius:10,padding:"10px 18px",fontFamily:"inherit",fontWeight:800,fontSize:"0.85rem",cursor:"pointer"}}>
+          + New Announcement
+        </button>
+      </div>
+
+      {showForm && (
+        <div style={{background:card,border:"1px solid rgba(59,232,176,0.2)",borderRadius:16,padding:18,marginBottom:16}}>
+          <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"0.9rem",marginBottom:12,color:accentG}}>New Announcement</div>
+          <div style={{display:"flex",flexDirection:"column" as const,gap:10,marginBottom:14}}>
+            <input value={draft.title} onChange={e=>setDraft(d=>({...d,title:e.target.value}))} placeholder="Title (e.g. New products now available!)"
+              style={{background:card2,border:"1px solid "+border,borderRadius:9,padding:"9px 13px",color:"#fff",fontFamily:"inherit",fontSize:"0.85rem",outline:"none"}}/>
+            <textarea value={draft.body} onChange={e=>setDraft(d=>({...d,body:e.target.value}))} placeholder="Announcement body…" rows={3}
+              style={{background:card2,border:"1px solid "+border,borderRadius:9,padding:"9px 13px",color:"#fff",fontFamily:"inherit",fontSize:"0.85rem",outline:"none",resize:"none" as const}}/>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap" as const}}>
+              {["info","success","warning","error"].map(t=>(
+                <button key={t} onClick={()=>setDraft(d=>({...d,type:t}))}
+                  style={{background:draft.type===t?"rgba(255,255,255,0.1)":"rgba(255,255,255,0.04)",border:`1px solid ${draft.type===t?typeColor(t):"rgba(255,255,255,0.1)"}`,color:draft.type===t?typeColor(t):"rgba(255,255,255,0.5)",borderRadius:8,padding:"6px 14px",cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:"0.75rem",textTransform:"capitalize" as const}}>
+                  {t}
+                </button>
+              ))}
+              <button onClick={()=>setDraft(d=>({...d,pinned:!d.pinned}))}
+                style={{background:draft.pinned?"rgba(255,209,102,0.1)":"rgba(255,255,255,0.04)",border:`1px solid ${draft.pinned?"rgba(255,209,102,0.3)":"rgba(255,255,255,0.1)"}`,color:draft.pinned?"#ffd166":"rgba(255,255,255,0.5)",borderRadius:8,padding:"6px 14px",cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:"0.75rem"}}>
+                {draft.pinned?"📌 Pinned":"📌 Pin it"}
+              </button>
+            </div>
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={handleSave} disabled={saving||!draft.title}
+              style={{background:accentG,color:"#0e0e0e",border:"none",borderRadius:8,padding:"9px 18px",fontFamily:"inherit",fontWeight:800,fontSize:"0.82rem",cursor:"pointer"}}>
+              {saving?"Saving…":"📢 Publish"}
+            </button>
+            <button onClick={()=>setShowForm(false)} style={{background:"rgba(255,255,255,0.05)",border:"1px solid "+border,color:muted,borderRadius:8,padding:"9px 12px",cursor:"pointer",fontFamily:"inherit",fontSize:"0.82rem"}}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {loading ? <div style={{textAlign:"center",padding:40,color:muted}}>Loading…</div> : anns.length===0 ? (
+        <div style={{textAlign:"center",padding:60,color:muted}}><div style={{fontSize:"2.5rem",marginBottom:10}}>📢</div>No announcements yet.</div>
+      ) : (
+        <div style={{display:"flex",flexDirection:"column" as const,gap:8}}>
+          {anns.map(a=>(
+            <div key={a.id} style={{background:card,border:`1px solid ${a.active?typeColor(a.type)+"33":"rgba(255,255,255,0.06)"}`,borderRadius:12,padding:"14px 16px",opacity:a.active?1:0.55,transition:"all .15s"}}>
+              <div style={{display:"flex",alignItems:"flex-start",gap:12}}>
+                <div style={{flex:1}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4,flexWrap:"wrap" as const}}>
+                    <span style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"0.88rem",color:"#fff"}}>{a.title}</span>
+                    <span style={{background:"rgba(255,255,255,0.07)",color:typeColor(a.type),fontSize:"0.6rem",fontWeight:700,padding:"1px 7px",borderRadius:100,textTransform:"capitalize" as const}}>{a.type}</span>
+                    {a.pinned&&<span style={{fontSize:"0.6rem",color:"#ffd166"}}>📌 Pinned</span>}
+                    {!a.active&&<span style={{fontSize:"0.6rem",color:muted,fontStyle:"italic"}}>Hidden</span>}
+                  </div>
+                  {a.body&&<div style={{fontSize:"0.78rem",color:"rgba(255,255,255,0.65)",lineHeight:1.5}}>{a.body}</div>}
+                  <div style={{fontSize:"0.62rem",color:muted,marginTop:6}}>{new Date(a.createdAt).toLocaleString()}</div>
+                </div>
+                <div style={{display:"flex",gap:6,flexShrink:0}}>
+                  <button onClick={()=>handleToggle(a)} className="cms-btn"
+                    style={{background:a.active?"rgba(59,232,176,0.1)":"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",color:a.active?accentG:muted,borderRadius:7,padding:"5px 10px",cursor:"pointer",fontSize:"0.7rem",fontWeight:700}}>
+                    {a.active?"Hide":"Show"}
+                  </button>
+                  <button onClick={()=>handleDelete(a.id)} className="cms-btn"
+                    style={{background:"rgba(255,107,107,0.08)",border:"1px solid rgba(255,107,107,0.15)",color:accentR,borderRadius:7,padding:"5px 8px",cursor:"pointer",fontSize:"0.7rem"}}>🗑</button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// SECTION: ORDERS VIEWER
+// ══════════════════════════════════════════════════════════════
+function CMSOrders({accentG,accentB,accentY,card,border,muted}:any) {
+  // Orders are per-user in localStorage — aggregate all
+  const [orders, setOrders] = useState<any[]>([]);
+  const [search, setSearch] = useState("");
+
+  useEffect(()=>{
+    const users = getUsers() as any;
+    const all: any[] = [];
+    Object.values(users).forEach((u:any)=>{
+      try {
+        const key = `nxg_orders_${u.email}`;
+        const userOrders = JSON.parse(localStorage.getItem(key)||"[]");
+        userOrders.forEach((o:any)=>all.push({...o,_userEmail:u.email,_userName:u.fname||u.name||u.email}));
+      } catch {}
+    });
+    all.sort((a,b)=>new Date(b.date||0).getTime()-new Date(a.date||0).getTime());
+    setOrders(all);
+  },[]);
+
+  const filtered = orders.filter(o=>!search||o._userEmail?.toLowerCase().includes(search.toLowerCase())||o.id?.toLowerCase().includes(search.toLowerCase()));
+  const statusColor=(s:string)=>s==="delivered"?accentG:s==="shipped"?accentB:accentY;
+
+  return (
+    <div style={{animation:"fadeUp .25s ease-out"}}>
+      <div style={{marginBottom:20}}>
+        <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1.2rem",color:"#fff"}}>🧾 Order History</div>
+        <div style={{fontSize:"0.72rem",color:muted,marginTop:2}}>{orders.length} total orders across all members</div>
+      </div>
+      <div style={{position:"relative" as const,marginBottom:14}}>
+        <span style={{position:"absolute" as const,left:12,top:"50%",transform:"translateY(-50%)",color:muted}}>🔍</span>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search by email or order ID…"
+          style={{width:"100%",background:card,border:"1px solid "+border,borderRadius:10,padding:"9px 14px 9px 34px",color:"#fff",fontFamily:"inherit",fontSize:"0.85rem",outline:"none",boxSizing:"border-box" as const}}/>
+      </div>
+      {filtered.length===0 ? <div style={{textAlign:"center",padding:60,color:muted}}><div style={{fontSize:"2.5rem",marginBottom:10}}>🧾</div>No orders found.</div> : (
+        <div style={{display:"flex",flexDirection:"column" as const,gap:8}}>
+          {filtered.map((o,i)=>(
+            <div key={i} style={{background:card,border:"1px solid "+border,borderRadius:12,padding:"14px 16px"}}>
+              <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12,flexWrap:"wrap" as const}}>
+                <div>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4,flexWrap:"wrap" as const}}>
+                    <span style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"0.85rem",color:"#fff"}}>Order #{o.id||"—"}</span>
+                    <span style={{background:"rgba(255,255,255,0.07)",color:statusColor(o.status||"processing"),fontSize:"0.62rem",fontWeight:700,padding:"1px 8px",borderRadius:100,textTransform:"capitalize" as const}}>{o.status||"processing"}</span>
+                  </div>
+                  <div style={{fontSize:"0.72rem",color:muted,marginBottom:2}}>👤 {o._userName} · {o._userEmail}</div>
+                  {o.items&&<div style={{fontSize:"0.72rem",color:"rgba(255,255,255,0.6)"}}>{o.items.map((it:any)=>it.name||(it.n)).join(", ")}</div>}
+                  <div style={{fontSize:"0.65rem",color:muted,marginTop:4}}>{o.date?new Date(o.date).toLocaleString():"—"}</div>
+                </div>
+                <div style={{textAlign:"right" as const,flexShrink:0}}>
+                  <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1rem",color:accentG}}>{o.total||"—"}</div>
+                  {o.tracking&&<div style={{fontSize:"0.65rem",color:muted,marginTop:2}}>📦 {o.tracking}</div>}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// SECTION: SITE SETTINGS
+// ══════════════════════════════════════════════════════════════
+function CMSSiteSettings({accentG,accentR,accentB,card,card2,border,muted,go}:any) {
+  const [settings, setSettings] = useState<any>({});
+  const [loading, setLoading]   = useState(true);
+  const [saved, setSaved]       = useState(false);
+  const [draft, setDraft]       = useState<any>({});
+
+  useEffect(()=>{
+    cmsGetSettings().then(s=>{
+      const merged = {
+        siteName: "Alphaomegatides",
+        contactEmail: "alphaomegatides@yahoo.com",
+        supportMsg: "Contact us at alphaomegatides@yahoo.com for any questions.",
+        comingSoon: false,
+        maintenanceMode: false,
+        freeShippingThreshold: "150",
+        shippingNotice: "Free shipping on orders over $150",
+        instagramUrl: "",
+        twitterUrl: "https://x.com/alphaomegatides",
+        telegramUrl: "",
+        youtubeUrl: "",
+        siteTagline: "Where the tide turns for all.",
+        ...s
+      };
+      setSettings(merged); setDraft(merged); setLoading(false);
+    });
+  },[]);
+
+  const handleSave = async () => {
+    await cmsSaveSettings(draft);
+    setSettings(draft); setSaved(true);
+    setTimeout(()=>setSaved(false),2500);
+  };
+
+  const Field = ({k,label,ph,type="text"}:{k:string,label:string,ph:string,type?:string}) => (
+    <div>
+      <div style={{fontSize:"0.65rem",color:muted,fontWeight:600,marginBottom:4}}>{label}</div>
+      <input type={type} value={draft[k]||""} onChange={e=>setDraft((d:any)=>({...d,[k]:e.target.value}))} placeholder={ph}
+        style={{width:"100%",background:card2,border:"1px solid "+border,borderRadius:9,padding:"9px 13px",color:"#fff",fontFamily:"inherit",fontSize:"0.85rem",outline:"none",boxSizing:"border-box" as const}}/>
+    </div>
+  );
+
+  const Toggle = ({k,label,desc}:{k:string,label:string,desc:string}) => (
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:card2,border:`1px solid ${draft[k]?"rgba(59,232,176,0.25)":border}`,borderRadius:12,padding:"14px 16px",gap:12}}>
+      <div>
+        <div style={{fontWeight:700,fontSize:"0.85rem",color:"#fff",marginBottom:2}}>{label}</div>
+        <div style={{fontSize:"0.7rem",color:muted}}>{desc}</div>
+      </div>
+      <button onClick={()=>setDraft((d:any)=>({...d,[k]:!d[k]}))}
+        style={{background:draft[k]?"rgba(59,232,176,0.15)":"rgba(255,255,255,0.06)",border:`1px solid ${draft[k]?"rgba(59,232,176,0.35)":border}`,color:draft[k]?accentG:"rgba(255,255,255,0.4)",borderRadius:10,padding:"8px 18px",cursor:"pointer",fontFamily:"inherit",fontWeight:800,fontSize:"0.82rem",flexShrink:0,transition:"all .15s"}}>
+        {draft[k]?"● ON":"○ OFF"}
+      </button>
+    </div>
+  );
+
+  if (loading) return <div style={{textAlign:"center",padding:40,color:muted}}>Loading settings…</div>;
+
+  return (
+    <div style={{animation:"fadeUp .25s ease-out"}}>
+      <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1.2rem",color:"#fff",marginBottom:4}}>⚙️ Site Settings</div>
+      <div style={{fontSize:"0.72rem",color:muted,marginBottom:24}}>Changes save to Firebase and apply sitewide</div>
+
+      <div style={{display:"flex",flexDirection:"column" as const,gap:20}}>
+
+        {/* Site modes */}
+        <div style={{background:card,border:"1px solid "+border,borderRadius:16,padding:18}}>
+          <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"0.9rem",marginBottom:14,color:"rgba(255,255,255,0.8)"}}>🚦 Site Modes</div>
+          <div style={{display:"flex",flexDirection:"column" as const,gap:10}}>
+            <Toggle k="comingSoon" label="Coming Soon Mode" desc="Hides the store behind a waitlist gate. Flip OFF to open the store."/>
+            <Toggle k="maintenanceMode" label="Maintenance Mode" desc="Shows a maintenance message to all visitors. Use during updates."/>
+          </div>
+        </div>
+
+        {/* General info */}
+        <div style={{background:card,border:"1px solid "+border,borderRadius:16,padding:18}}>
+          <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"0.9rem",marginBottom:14,color:"rgba(255,255,255,0.8)"}}>🏷️ General Info</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:12}}>
+            <Field k="siteName"   label="Site Name"    ph="Alphaomegatides"/>
+            <Field k="siteTagline" label="Tagline"    ph="Where the tide turns for all."/>
+            <Field k="contactEmail" label="Contact Email" ph="alphaomegatides@yahoo.com"/>
+            <Field k="freeShippingThreshold" label="Free Shipping Threshold ($)" ph="150"/>
+          </div>
+          <div style={{marginTop:12}}>
+            <Field k="shippingNotice" label="Shipping Notice (shown on cart)" ph="Free shipping on orders over $150"/>
+          </div>
+          <div style={{marginTop:12}}>
+            <div style={{fontSize:"0.65rem",color:muted,fontWeight:600,marginBottom:4}}>Support Message (shown on contact page)</div>
+            <textarea value={draft.supportMsg||""} onChange={e=>setDraft((d:any)=>({...d,supportMsg:e.target.value}))} rows={2}
+              style={{width:"100%",background:card2,border:"1px solid "+border,borderRadius:9,padding:"9px 13px",color:"#fff",fontFamily:"inherit",fontSize:"0.85rem",outline:"none",resize:"none" as const,boxSizing:"border-box" as const}}/>
+          </div>
+        </div>
+
+        {/* Social links */}
+        <div style={{background:card,border:"1px solid "+border,borderRadius:16,padding:18}}>
+          <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"0.9rem",marginBottom:14,color:"rgba(255,255,255,0.8)"}}>🔗 Social Links</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:12}}>
+            <Field k="twitterUrl"   label="𝕏 / Twitter URL"  ph="https://x.com/alphaomegatides"/>
+            <Field k="instagramUrl" label="Instagram URL"    ph="https://instagram.com/..."/>
+            <Field k="telegramUrl"  label="Telegram URL"     ph="https://t.me/..."/>
+            <Field k="youtubeUrl"   label="YouTube URL"      ph="https://youtube.com/..."/>
+          </div>
+        </div>
+
+        {/* Quick actions */}
+        <div style={{background:card,border:"1px solid "+border,borderRadius:16,padding:18}}>
+          <div style={{fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:"0.9rem",marginBottom:14,color:"rgba(255,255,255,0.8)"}}>⚡ Quick Actions</div>
+          <div style={{display:"flex",gap:10,flexWrap:"wrap" as const}}>
+            {[["💬","Go to Chat",()=>go("chat")],["📦","Go to Products",()=>go("home")],["⚡","Flash Sale",()=>go("dashboard")],["📊","Analytics",()=>go("dashboard")]].map(([icon,label,fn]:any)=>(
+              <button key={String(label)} onClick={fn}
+                style={{background:"rgba(255,255,255,0.05)",border:"1px solid "+border,color:"rgba(255,255,255,0.7)",borderRadius:10,padding:"9px 14px",cursor:"pointer",fontFamily:"inherit",fontWeight:600,fontSize:"0.8rem",display:"flex",alignItems:"center",gap:6,transition:"all .15s"}}>
+                {icon} {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Save button */}
+        <button onClick={handleSave}
+          style={{background:saved?"rgba(59,232,176,0.15)":accentG,color:saved?"#3be8b0":"#0e0e0e",border:saved?"1px solid rgba(59,232,176,0.4)":"none",borderRadius:14,padding:"14px",fontFamily:"inherit",fontWeight:800,fontSize:"0.95rem",cursor:"pointer",transition:"all .2s",boxShadow:saved?"none":"0 4px 20px rgba(59,232,176,0.3)"}}>
+          {saved?"✓ Settings Saved!":"💾 Save All Settings"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+
+
 export default function App(){
   const [pg,spg]=useState("home");
   const [pid,spid]=useState(null);
@@ -8738,7 +9582,7 @@ export default function App(){
     spg(p); if(id){spid(id); if(p==="category")setCatId(id);}
     setTimeout(()=>window.scrollTo(0,0),0);
     // Dynamic page title
-    const titles={home:"Alphaomegatides — Research Peptides",cart:"Cart — Alphaomegatides",quiz:"Find My Compound — Alphaomegatides",chat:"Community Chat — Alphaomegatides",xcommunity:"X Community — Alphaomegatides",videos:"Video Tutorials — Alphaomegatides",stacks:"Stack Builder — Alphaomegatides",wiki:"Research Wiki — Alphaomegatides",journal:"Research Journal — Alphaomegatides",dosing:"Dosing Calculator — Alphaomegatides",stack:"Stack Checker — Alphaomegatides",dashboard:"My Account — Alphaomegatides",login:"Sign In — Alphaomegatides",register:"Create Account — Alphaomegatides",coa:"COA Library — Alphaomegatides",blog:"Research Blog — Alphaomegatides",about:"About Us — Alphaomegatides"};
+    const titles={home:"Alphaomegatides — Research Peptides",cart:"Cart — Alphaomegatides",quiz:"Find My Compound — Alphaomegatides",chat:"Community Chat — Alphaomegatides",xcommunity:"X Community — Alphaomegatides",admin:"Admin Control Panel — Alphaomegatides",videos:"Video Tutorials — Alphaomegatides",stacks:"Stack Builder — Alphaomegatides",wiki:"Research Wiki — Alphaomegatides",journal:"Research Journal — Alphaomegatides",dosing:"Dosing Calculator — Alphaomegatides",stack:"Stack Checker — Alphaomegatides",dashboard:"My Account — Alphaomegatides",login:"Sign In — Alphaomegatides",register:"Create Account — Alphaomegatides",coa:"COA Library — Alphaomegatides",blog:"Research Blog — Alphaomegatides",about:"About Us — Alphaomegatides"};
     document.title=titles[p]||"Alphaomegatides";
   }
   function goBack(){
@@ -8845,6 +9689,7 @@ export default function App(){
     {pg==="dashboard"&&(user?<Dashboard user={user} go={go} onLogout={()=>su(null)} wishlistIds={wishlist}/>:<Login go={go} onLogin={su}/>)}
     {pg==="chat"&&<MemberChatPage go={go} user={user}/>}
     {pg==="xcommunity"&&<XCommunityPage go={go} user={user}/>}
+    {pg==="admin"&&<AdminCMSPage user={user} go={go}/>}
     {pg==="videos"&&<VideoTutorialPage go={go} user={user}/>}
     {pg==="stacks"&&<StackBuilderPage go={go} user={user}/>}
     {pg==="wiki"&&<ResearchWikiPage go={go}/>}
