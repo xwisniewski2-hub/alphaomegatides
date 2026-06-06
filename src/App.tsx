@@ -5214,6 +5214,19 @@ function decrementInventory(productId:string){
   return inv[productId];
 }
 function getStock(productId:string):number{
+  // Check CMS override first — admin panel stock control takes priority
+  try {
+    const cmsOverrides = JSON.parse(localStorage.getItem("aot_cms_overrides")||"{}");
+    const ov = cmsOverrides[productId];
+    if (ov) {
+      if (ov.inStock === false || ov.oos === true) return 0;
+      if (ov.inStock === true && ov.oos !== true) {
+        const inv = getInventory();
+        const stored = inv[productId];
+        return stored === 0 ? 10 : (stored === undefined ? 10 : stored);
+      }
+    }
+  } catch {}
   const inv=getInventory();
   return inv[productId]===undefined?10:inv[productId];
 }
@@ -8710,6 +8723,22 @@ function CMSProvider({ children }: { children: React.ReactNode }) {
       if (pData) {
         setProductOverrides(pData);
         localStorage.setItem(CMS_CACHE_KEY, JSON.stringify(pData));
+        // Sync inventory numbers from CMS overrides on every fetch
+        try {
+          const inv = JSON.parse(localStorage.getItem("nxg_inv")||"{}");
+          let changed = false;
+          Object.entries(pData).forEach(([id, ov]:any) => {
+            if (ov.inStock === false || ov.oos === true) {
+              if (inv[id] !== 0) { inv[id] = 0; changed = true; }
+            } else if (ov.inStock === true && ov.oos !== true) {
+              if (inv[id] === 0 || inv[id] === undefined) { inv[id] = 10; changed = true; }
+            }
+          });
+          if (changed) {
+            localStorage.setItem("nxg_inv", JSON.stringify(inv));
+            window.dispatchEvent(new Event("nxg_inv_update"));
+          }
+        } catch {}
       }
       if (sData) {
         setSettings(sData);
@@ -8918,18 +8947,35 @@ function CMSProducts({accentG,accentR,accentB,accentY,card,card2,border,muted}:a
     if (!editing) return;
     setSaving(true);
     await cmsSaveProduct(editing, { ...draft, updatedAt: Date.now() });
+    // Sync inventory number with inStock flag
+    try {
+      const inv = JSON.parse(localStorage.getItem("nxg_inv")||"{}");
+      if (draft.inStock === false || draft.oos === true) {
+        inv[editing] = 0;
+      } else if (draft.inStock === true) {
+        if (!inv[editing] || inv[editing] === 0) inv[editing] = 10;
+      }
+      localStorage.setItem("nxg_inv", JSON.stringify(inv));
+      window.dispatchEvent(new Event("nxg_inv_update"));
+    } catch {}
     const updated = await cmsGetProducts();
     setOverrides(updated||{});
-    // Push to localStorage cache so site reads it immediately
     try { localStorage.setItem("aot_cms_overrides", JSON.stringify(updated||{})); } catch {}
-    // Trigger a global refresh event so all components pick up changes
     try { window.dispatchEvent(new CustomEvent("aot_cms_update")); } catch {}
     setSaving(false); setSaved(editing); setEditing(null);
     setTimeout(()=>setSaved(null),2000);
   };
 
   const handleToggleStock = async (id: string, current: boolean) => {
-    await cmsSaveProduct(id, { inStock: !current, oos: current, updatedAt: Date.now() });
+    const newInStock = !current;
+    await cmsSaveProduct(id, { inStock: newInStock, oos: !newInStock, updatedAt: Date.now() });
+    // Also sync the inventory number so getStock() reflects the change immediately
+    try {
+      const inv = JSON.parse(localStorage.getItem("nxg_inv")||"{}");
+      inv[id] = newInStock ? 10 : 0;
+      localStorage.setItem("nxg_inv", JSON.stringify(inv));
+      window.dispatchEvent(new Event("nxg_inv_update"));
+    } catch {}
     const updated = await cmsGetProducts();
     setOverrides(updated||{});
     try { localStorage.setItem("aot_cms_overrides", JSON.stringify(updated||{})); } catch {}
