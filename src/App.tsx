@@ -2834,7 +2834,7 @@ function HeroWaitlistBtn() {
   );
 }
 
-function Home({go,recentlyViewed=[],wishlist=[],toggleWishlist=()=>{}}){
+function Home({go,products=PRODUCTS,recentlyViewed=[],wishlist=[],toggleWishlist=()=>{}}){
   return <div style={{paddingTop:64,background:"#0e0e0e",color:"#ffffff"}}>
     <section style={{minHeight:"80vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center",padding:"48px 24px 40px",background:"#0e0e0e",position:"relative",overflow:"hidden"}}>
       <ParticleField/>
@@ -2907,7 +2907,7 @@ function Home({go,recentlyViewed=[],wishlist=[],toggleWishlist=()=>{}}){
       </div>
       <div style={{display:"flex",gap:10,overflowX:"auto",paddingBottom:8}}>
         {recentlyViewed.map(id=>{
-          const p=PRODUCTS.find(x=>x.id===id);
+          const p=products.find(x=>x.id===id);
           if(!p) return null;
           return <div key={id} onClick={()=>go("product",id)}
             style={{display:"flex",alignItems:"center",gap:10,background:"#1a1a1a",border:`1px solid ${p.color}33`,borderRadius:12,padding:"10px 14px",cursor:"pointer",flexShrink:0,transition:"all .2s",minWidth:160}}
@@ -2960,8 +2960,8 @@ function Home({go,recentlyViewed=[],wishlist=[],toggleWishlist=()=>{}}){
         <div style={{marginLeft:"auto",fontSize:"0.78rem",color:"rgba(255,255,255,0.4)"}}>Compounds related to what you viewed</div>
       </div>
       <div style={{display:"flex",gap:12,overflowX:"auto" as const,paddingBottom:8}}>
-        {PRODUCTS.filter(p=>!recentlyViewed.includes(p.id)&&recentlyViewed.some(rv=>{
-          const rvP=PRODUCTS.find(x=>x.id===rv);
+        {products.filter(p=>!recentlyViewed.includes(p.id)&&recentlyViewed.some(rv=>{
+          const rvP=products.find(x=>x.id===rv);
           return rvP&&rvP.cat===p.cat;
         })).slice(0,5).map(p=>(
           <div key={p.id} onClick={()=>go("product",p.id)}
@@ -2973,8 +2973,8 @@ function Home({go,recentlyViewed=[],wishlist=[],toggleWishlist=()=>{}}){
             <div style={{color:p.color,fontSize:"0.78rem",fontWeight:600}}>{p.price}</div>
           </div>
         ))}
-        {PRODUCTS.filter(p=>!recentlyViewed.includes(p.id)&&recentlyViewed.some(rv=>{const rvP=PRODUCTS.find(x=>x.id===rv);return rvP&&rvP.cat===p.cat;})).length===0&&
-          PRODUCTS.filter(p=>!recentlyViewed.includes(p.id)).slice(0,5).map(p=>(
+        {products.filter(p=>!recentlyViewed.includes(p.id)&&recentlyViewed.some(rv=>{const rvP=products.find(x=>x.id===rv);return rvP&&rvP.cat===p.cat;})).length===0&&
+          products.filter(p=>!recentlyViewed.includes(p.id)).slice(0,5).map(p=>(
             <div key={p.id} onClick={()=>go("product",p.id)}
               style={{minWidth:160,background:"#141414",border:"1px solid rgba(255,255,255,0.07)",borderRadius:14,padding:"14px",cursor:"pointer",flexShrink:0}}
               onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=p.color+"66";}}
@@ -8652,6 +8652,92 @@ function useStreamLive():boolean {
 
 const FB_ADMIN_URL = "https://alphaomegatides-chat-default-rtdb.firebaseio.com";
 
+// ── CMS runtime state — applied globally on app load ──────────
+const CMS_CACHE_KEY = "aot_cms_overrides";
+const CMS_SETTINGS_KEY = "aot_cms_settings";
+
+function getCachedOverrides(): Record<string,any> {
+  try { return JSON.parse(localStorage.getItem(CMS_CACHE_KEY)||"{}"); } catch { return {}; }
+}
+function getCachedSettings(): Record<string,any> {
+  try { return JSON.parse(localStorage.getItem(CMS_SETTINGS_KEY)||"{}"); } catch { return {}; }
+}
+
+// Merge hardcoded PRODUCTS with Firebase CMS overrides
+function getMergedProducts(overrides: Record<string,any>) {
+  return PRODUCTS.map(p => {
+    const ov = overrides[p.id];
+    if (!ov) return p;
+    return {
+      ...p,
+      ...(ov.name       ? { name: ov.name }       : {}),
+      ...(ov.price      ? { price: ov.price }      : {}),
+      ...(ov.desc       ? { desc: ov.desc }        : {}),
+      ...(ov.icon       ? { icon: ov.icon }        : {}),
+      ...(ov.color      ? { color: ov.color }      : {}),
+      ...(ov.tag        ? { tag: ov.tag }          : {}),
+      ...(ov.inStock === false || ov.oos ? {
+        sizes: p.sizes?.map((s:any) => ({ ...s, oos: true })) ?? p.sizes
+      } : ov.inStock === true ? {
+        sizes: p.sizes?.map((s:any) => ({ ...s, oos: false })) ?? p.sizes
+      } : {}),
+    };
+  });
+}
+
+// Global CMS context
+const CMSContext = React.createContext<{
+  productOverrides: Record<string,any>;
+  settings: Record<string,any>;
+  mergedProducts: any[];
+  refresh: ()=>void;
+}>({ productOverrides:{}, settings:{}, mergedProducts:PRODUCTS, refresh:()=>{} });
+
+function useCMS() { return React.useContext(CMSContext); }
+
+function CMSProvider({ children }: { children: React.ReactNode }) {
+  const [productOverrides, setProductOverrides] = React.useState<Record<string,any>>(getCachedOverrides);
+  const [settings, setSettings] = React.useState<Record<string,any>>(getCachedSettings);
+
+  const refresh = React.useCallback(async () => {
+    try {
+      const [pRes, sRes] = await Promise.all([
+        fetch(`${FB_ADMIN_URL}/cms/products.json`),
+        fetch(`${FB_ADMIN_URL}/cms/settings.json`),
+      ]);
+      const pData = pRes.ok ? await pRes.json() : null;
+      const sData = sRes.ok ? await sRes.json() : null;
+      if (pData) {
+        setProductOverrides(pData);
+        localStorage.setItem(CMS_CACHE_KEY, JSON.stringify(pData));
+      }
+      if (sData) {
+        setSettings(sData);
+        localStorage.setItem(CMS_SETTINGS_KEY, JSON.stringify(sData));
+      }
+    } catch(e) { console.warn("CMS fetch failed, using cache", e); }
+  }, []);
+
+  React.useEffect(() => {
+    refresh(); // fetch on mount
+    const iv = setInterval(refresh, 60000); // refresh every 60s
+    // Also refresh immediately when admin saves changes
+    window.addEventListener("aot_cms_update", refresh);
+    return () => {
+      clearInterval(iv);
+      window.removeEventListener("aot_cms_update", refresh);
+    };
+  }, [refresh]);
+
+  const mergedProducts = React.useMemo(()=>getMergedProducts(productOverrides),[productOverrides]);
+
+  return (
+    <CMSContext.Provider value={{ productOverrides, settings, mergedProducts, refresh }}>
+      {children}
+    </CMSContext.Provider>
+  );
+}
+
 // ── CMS Product overrides (stored in Firebase, merge over hardcoded PRODUCTS) ──
 async function cmsGetProducts(): Promise<Record<string,any>> {
   try {
@@ -8834,6 +8920,10 @@ function CMSProducts({accentG,accentR,accentB,accentY,card,card2,border,muted}:a
     await cmsSaveProduct(editing, { ...draft, updatedAt: Date.now() });
     const updated = await cmsGetProducts();
     setOverrides(updated||{});
+    // Push to localStorage cache so site reads it immediately
+    try { localStorage.setItem("aot_cms_overrides", JSON.stringify(updated||{})); } catch {}
+    // Trigger a global refresh event so all components pick up changes
+    try { window.dispatchEvent(new CustomEvent("aot_cms_update")); } catch {}
     setSaving(false); setSaved(editing); setEditing(null);
     setTimeout(()=>setSaved(null),2000);
   };
@@ -8842,6 +8932,8 @@ function CMSProducts({accentG,accentR,accentB,accentY,card,card2,border,muted}:a
     await cmsSaveProduct(id, { inStock: !current, oos: current, updatedAt: Date.now() });
     const updated = await cmsGetProducts();
     setOverrides(updated||{});
+    try { localStorage.setItem("aot_cms_overrides", JSON.stringify(updated||{})); } catch {}
+    try { window.dispatchEvent(new CustomEvent("aot_cms_update")); } catch {}
   };
 
   const handleAddNew = async () => {
@@ -8850,6 +8942,8 @@ function CMSProducts({accentG,accentR,accentB,accentY,card,card2,border,muted}:a
     await cmsSaveProduct(id, { ...newProduct, id, createdAt: Date.now(), _custom: true });
     const updated = await cmsGetProducts();
     setOverrides(updated||{});
+    try { localStorage.setItem("aot_cms_overrides", JSON.stringify(updated||{})); } catch {}
+    try { window.dispatchEvent(new CustomEvent("aot_cms_update")); } catch {}
     setNewProduct({name:"",price:"",size:"",desc:"",icon:"🧬",color:"#3be8b0",inStock:true,tag:"",category:""});
     setShowNew(false);
   };
@@ -9388,6 +9482,8 @@ function CMSSiteSettings({accentG,accentR,accentB,card,card2,border,muted,go}:an
   const handleSave = async () => {
     await cmsSaveSettings(draft);
     setSettings(draft); setSaved(true);
+    try { localStorage.setItem("aot_cms_settings", JSON.stringify(draft)); } catch {}
+    try { window.dispatchEvent(new CustomEvent("aot_cms_update")); } catch {}
     setTimeout(()=>setSaved(false),2500);
   };
 
@@ -9489,6 +9585,10 @@ export default function App(){
   const [pg,spg]=useState("home");
   const [pid,spid]=useState(null);
   const [user,su]=useState(()=>getSess());
+  const { settings: cmsSettings, mergedProducts } = useCMS();
+  // CMS-controlled flags (fall back to hardcoded if not set)
+  const siteComingSoon    = cmsSettings?.comingSoon    ?? COMING_SOON;
+  const siteMaintenance   = cmsSettings?.maintenanceMode ?? false;
   React.useEffect(()=>{
   },[]);
 
@@ -9623,7 +9723,7 @@ export default function App(){
     }
   }
   function removeFromCart(idx){ setCart(c=>c.filter((_,i)=>i!==idx)); }
-  const prod=PRODUCTS.find(p=>p.id===pid);
+  const prod=mergedProducts.find(p=>p.id===pid);
   const canGoBack=history.length>1;
   // eslint-disable-next-line react-hooks/rules-of-hooks
   useKeyboardShortcuts(go,setSearchOpen);
@@ -9631,7 +9731,7 @@ export default function App(){
   usePageTitle(pg,pid);
 
   const {dark}=useDarkMode();
-  return <ErrorBoundary><div style={{fontFamily:"'DM Sans',sans-serif",background:dark?"#0e0e0e":"#f0f0ec",minHeight:"100vh",color:dark?"#ffffff":"#111111",transition:"background .3s,color .3s"}} onTouchStart={pg!=="cart"?onTouchStart:undefined} onTouchEnd={pg!=="cart"?onTouchEnd:undefined}>
+  return <CMSProvider><ErrorBoundary><div style={{fontFamily:"'DM Sans',sans-serif",background:dark?"#0e0e0e":"#f0f0ec",minHeight:"100vh",color:dark?"#ffffff":"#111111",transition:"background .3s,color .3s"}} onTouchStart={pg!=="cart"?onTouchStart:undefined} onTouchEnd={pg!=="cart"?onTouchEnd:undefined}>
     <style>{`
       @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
       .page-fade{animation:fadeIn 0.22s ease-out}
@@ -9639,8 +9739,16 @@ export default function App(){
     `}</style>
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet"/>
     {(!aged) && <AgeGate onConfirm={confirmAge}/>}
-    {COMING_SOON && <ExitIntentPopup/>}
-    {COMING_SOON && <ComingSoonBanner/>}
+    {(siteComingSoon||COMING_SOON) && <ExitIntentPopup/>}
+    {siteMaintenance && !siteComingSoon && pg!=="admin" && (
+      <div style={{position:"fixed",inset:0,zIndex:9998,background:"#0e0e0e",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16,padding:40}}>
+        <div style={{fontSize:"3rem"}}>🔧</div>
+        <div style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:"1.6rem",color:"#fff"}}>Under Maintenance</div>
+        <div style={{color:"rgba(255,255,255,0.5)",fontSize:"0.9rem",textAlign:"center",maxWidth:320,lineHeight:1.6}}>We're making improvements. Back shortly.</div>
+        <div style={{color:"rgba(255,255,255,0.3)",fontSize:"0.75rem"}}>alphaomegatides@yahoo.com</div>
+      </div>
+    )}
+    {(siteComingSoon||COMING_SOON) && <ComingSoonBanner/>}
     <FlashSaleBanner/>
     <CookieConsent/>
     <ComplianceBanner/>
@@ -9649,7 +9757,7 @@ export default function App(){
     <SearchOverlay open={searchOpen} onClose={()=>setSearchOpen(false)} go={go}/>
     <ChatWidget/>
     <Nav user={user} go={go} onLogout={()=>su(null)} cartCount={cart.length}/>
-    {pg==="home"&&<div key="home" className="page-fade"><Home go={go}   recentlyViewed={recentlyViewed} wishlist={wishlist} toggleWishlist={toggleWishlist}/></div>}
+    {pg==="home"&&<div key="home" className="page-fade"><Home go={go} products={mergedProducts} recentlyViewed={recentlyViewed} wishlist={wishlist} toggleWishlist={toggleWishlist}/></div>}
     {pg==="product"&&prod&&<div key={"product-"+prod.id} className="page-fade"><ProductPage p={prod} go={go} onAddToCart={(sz,sp)=>{addToCart(prod,sz,sp);go("cart");}} wishlist={wishlist} toggleWishlist={toggleWishlist}/></div>}
     {pg==="checkout"&&prod&&<CheckoutPage product={prod} go={go} user={user}/>}
     {pg==="coming-soon"&&<ComingSoonPage go={go}/>}
@@ -9713,5 +9821,5 @@ export default function App(){
         onMouseLeave={e=>e.currentTarget.style.background="rgba(20,20,20,0.92)"}>↓</button>
     </div>
   </div>
-  </ErrorBoundary>;
+  </ErrorBoundary></CMSProvider>;
 }
